@@ -23,6 +23,26 @@ const DEFAULT_B_PARAMS = {
     beta132: '',
     beta211: '',
     beta212: '',
+    // extended inputs
+    NBP: '',
+    NMP: '',
+    ACP: '',
+    OPC: '',
+    ACC: '',
+    PKP: '',
+    PPP: '',
+    NP: '',
+    NOA: '',
+    NAP: '',
+    B25_o: '',
+    B26_o: '',
+    UT: '',
+    DO: '',
+    N: '',
+    Npr: '',
+    VO: '',
+    PO: '',
+    B33_o: '',
 };
 
 function normalizeNumber(v) {
@@ -48,6 +68,26 @@ function buildExportPayload(years, paramsB) {
                 beta132: normalizeNumber(p.beta132),
                 beta211: normalizeNumber(p.beta211),
                 beta212: normalizeNumber(p.beta212),
+                // extended
+                NBP: normalizeNumber(p.NBP),
+                NMP: normalizeNumber(p.NMP),
+                ACP: normalizeNumber(p.ACP),
+                OPC: normalizeNumber(p.OPC),
+                ACC: normalizeNumber(p.ACC),
+                PKP: normalizeNumber(p.PKP),
+                PPP: normalizeNumber(p.PPP),
+                NP: normalizeNumber(p.NP),
+                NOA: normalizeNumber(p.NOA),
+                NAP: normalizeNumber(p.NAP),
+                B25_o: normalizeNumber(p.B25_o),
+                B26_o: normalizeNumber(p.B26_o),
+                UT: normalizeNumber(p.UT),
+                DO: normalizeNumber(p.DO),
+                N: normalizeNumber(p.N),
+                Npr: normalizeNumber(p.Npr),
+                VO: normalizeNumber(p.VO),
+                PO: normalizeNumber(p.PO),
+                B33_o: normalizeNumber(p.B33_o),
             };
         })
         .filter((row) => row.year);
@@ -141,6 +181,26 @@ export default function InputPage() {
                         beta132: row.beta132 ?? '',
                         beta211: row.beta211 ?? '',
                         beta212: row.beta212 ?? '',
+                        // extended
+                        NBP: row.NBP ?? '',
+                        NMP: row.NMP ?? '',
+                        ACP: row.ACP ?? '',
+                        OPC: row.OPC ?? '',
+                        ACC: row.ACC ?? '',
+                        PKP: row.PKP ?? '',
+                        PPP: row.PPP ?? '',
+                        NP: row.NP ?? '',
+                        NOA: row.NOA ?? '',
+                        NAP: row.NAP ?? '',
+                        B25_o: row.B25_o ?? '',
+                        B26_o: row.B26_o ?? '',
+                        UT: row.UT ?? '',
+                        DO: row.DO ?? '',
+                        N: row.N ?? '',
+                        Npr: row.Npr ?? '',
+                        VO: row.VO ?? '',
+                        PO: row.PO ?? '',
+                        B33_o: row.B33_o ?? '',
                     };
                 }
 
@@ -310,6 +370,26 @@ export default function InputPage() {
                     beta132: row.beta132 ?? '',
                     beta211: row.beta211 ?? '',
                     beta212: row.beta212 ?? '',
+                    // extended
+                    NBP: row.NBP ?? '',
+                    NMP: row.NMP ?? '',
+                    ACP: row.ACP ?? '',
+                    OPC: row.OPC ?? '',
+                    ACC: row.ACC ?? '',
+                    PKP: row.PKP ?? '',
+                    PPP: row.PPP ?? '',
+                    NP: row.NP ?? '',
+                    NOA: row.NOA ?? '',
+                    NAP: row.NAP ?? '',
+                    B25_o: row.B25_o ?? '',
+                    B26_o: row.B26_o ?? '',
+                    UT: row.UT ?? '',
+                    DO: row.DO ?? '',
+                    N: row.N ?? '',
+                    Npr: row.Npr ?? '',
+                    VO: row.VO ?? '',
+                    PO: row.PO ?? '',
+                    B33_o: row.B33_o ?? '',
                 };
             }
             const uniqueYears = [...new Set(ys)].sort((a, b) => a - b);
@@ -390,6 +470,36 @@ export default function InputPage() {
             ['beta211', 'β211'],
             ['beta212', 'β212'],
         ],
+        // extended metric groups (generic headings)
+        5: [
+            ['NBP','NBP'],
+            ['NMP','NMP'],
+            ['ACP','ACP'],
+            ['OPC','OPC'],
+            ['ACC','ACC'],
+        ],
+        6: [
+            ['PKP','PKP'],
+            ['PPP','PPP'],
+            ['NP','NP'],
+            ['NOA','NOA'],
+        ],
+        7: [['NAP','NAP']],
+        8: [
+            ['B25_o','B25_o'],
+            ['B26_o','B26_o'],
+        ],
+        9: [
+            ['UT','UT'],
+            ['DO','DO'],
+        ],
+        10: [
+            ['N','N'],
+            ['Npr','Npr'],
+            ['VO','VO'],
+            ['PO','PO'],
+        ],
+        11: [['B33_o','B33_o']],
     };
 
     return (
