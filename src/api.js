@@ -101,7 +101,7 @@ export const Api = {
 
     /** Обновить названия метрик для конкретного результата. */
     async updateMetricNames(dto) {
-        // dto: { calcResultId, codeB11, codeB12, codeB13, codeB21 }
+        // dto may contain calcResultId plus any of the codeBXX fields
         return request('/api/b/metric-names', {
             method: 'PUT',
             body: JSON.stringify(dto),
