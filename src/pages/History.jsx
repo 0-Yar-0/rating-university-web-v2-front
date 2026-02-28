@@ -46,7 +46,12 @@ export default function History({ items, setRows, selectedIteration, setSelected
                         <div className="history-summary">
                             {it.results?.map((row) => (
                                 <span key={row.year} className="history-chip">
-                                    {row.year}: {row.sumB.toFixed(2)}
+                                    {row.year}: {
+                                        Object.keys(row)
+                                            .filter(k => /^b\d+$/.test(k))
+                                            .map(k => `${k.toUpperCase()}=${row[k].toFixed(2)}`)
+                                            .join(', ')
+                                    }
                                 </span>
                             ))}
                         </div>

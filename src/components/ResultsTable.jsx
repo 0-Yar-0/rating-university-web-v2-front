@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 export default function ResultsTable({
     rows,
     metricNames,
+    metricKeys = [],
     onMetricNamesChange,
     visibleYears,
     onToggleYear,
@@ -33,6 +34,8 @@ export default function ResultsTable({
         setEditingKey(null);
         setEditValue('');
     };
+
+    const editableMetrics = ['b11','b12','b13','b21'];
 
     const renderHeaderCell = (key, label) => (
         <th className="results-table-header">
@@ -67,10 +70,20 @@ export default function ResultsTable({
                 <thead>
                     <tr>
                         <th className="results-table-header">Год</th>
-                        {renderHeaderCell('codeB11', metricNames.codeB11 || 'B11')}
-                        {renderHeaderCell('codeB12', metricNames.codeB12 || 'B12')}
-                        {renderHeaderCell('codeB13', metricNames.codeB13 || 'B13')}
-                        {renderHeaderCell('codeB21', metricNames.codeB21 || 'B21')}
+                        {metricKeys.map((k) => {
+                            const label = metricNames[`code${k.toUpperCase()}`] || k.toUpperCase();
+                            if (editableMetrics.includes(k)) {
+                                // convert b11 -> codeB11 etc
+                                const nameKey = `code${k.toUpperCase()}`;
+                                return renderHeaderCell(nameKey, label);
+                            } else {
+                                return (
+                                    <th className="results-table-header" key={k}>
+                                        {label}
+                                    </th>
+                                );
+                            }
+                        })}
                         <th className="results-table-header">Total B</th>
                         <th className="results-table-header">Показать</th>
                     </tr>
@@ -79,10 +92,11 @@ export default function ResultsTable({
                     {rows.map((r) => (
                         <tr key={`${r.year}-${r.iteration}`} className="results-table-row">
                             <td className="results-table-cell">{r.year}</td>
-                            <td className="results-table-cell">{r.b11.toFixed(2)}</td>
-                            <td className="results-table-cell">{r.b12.toFixed(2)}</td>
-                            <td className="results-table-cell">{r.b13.toFixed(2)}</td>
-                            <td className="results-table-cell">{r.b21.toFixed(2)}</td>
+                            {metricKeys.map((k) => (
+                                <td key={k} className="results-table-cell">
+                                    {typeof r[k] === 'number' ? r[k].toFixed(2) : r[k]}
+                                </td>
+                            ))}
                             <td className="results-table-cell">{r.sumB.toFixed(2)}</td>
                             <td className="results-table-cell" style={{ textAlign: 'center' }}>
                                 <input

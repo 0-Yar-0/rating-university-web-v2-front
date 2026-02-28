@@ -11,6 +11,11 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
     // какие годы отображать (true = показываем)
     const [visibleYears, setVisibleYears] = useState({});
 
+    // список ключей метрик (b11, b12, ... b33) вычисляется из первой строки
+    const metricKeys = rows.length
+        ? Object.keys(rows[0]).filter(k => /^b\d+$/.test(k))
+        : [];
+
     // грузим последний расчёт класса B
     useEffect(() => {
         if (rows.length) {
@@ -25,6 +30,7 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
             const next = { ...prev, ...patch };
             const first = rows[0];
             if (first && first.calcResultId) {
+                // API умеет сохранять только четыре основные метрики
                 Api.updateMetricNames({
                     calcResultId: first.calcResultId,
                     codeB11: next.codeB11,
@@ -63,13 +69,14 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
     return (
         <>
             <div className="display-flex">
-                <RadarBlock rows={activeRows} metricNames={metricNames} />
+                <RadarBlock rows={activeRows} metricNames={metricNames} metricKeys={metricKeys} />
                 <LineGraphBlock rows={activeRows} />
             </div>
 
             <ResultsTable
                 rows={rows}
                 metricNames={metricNames}
+                metricKeys={metricKeys}
                 onMetricNamesChange={handleMetricNamesChange}
                 visibleYears={visibleYears}
                 onToggleYear={handleToggleYear}
