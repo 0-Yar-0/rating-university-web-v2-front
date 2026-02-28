@@ -14,7 +14,7 @@ import {
  * rows: активные строки (учитывая чекбоксы)
  * metricNames: { codeB11, codeB12, codeB13, codeB21 }
  */
-export default function RadarBlock({ rows, metricNames }) {
+export default function RadarBlock({ rows, metricNames, metricKeys = [] }) {
     if (!rows || !rows.length) {
         return (
             <div className="card radar-card">
@@ -24,12 +24,10 @@ export default function RadarBlock({ rows, metricNames }) {
         );
     }
 
-    const metrics = [
-        { key: 'b11', label: metricNames.codeB11 || 'B11' },
-        { key: 'b12', label: metricNames.codeB12 || 'B12' },
-        { key: 'b13', label: metricNames.codeB13 || 'B13' },
-        { key: 'b21', label: metricNames.codeB21 || 'B21' },
-    ];
+    const metrics = metricKeys.map((k) => ({
+        key: k,
+        label: metricNames[`code${k.toUpperCase()}`] || k.toUpperCase(),
+    }));
 
     // данные вида:
     // [{ metric: 'B11', y_2024: ..., y_2025: ... }, ...]
