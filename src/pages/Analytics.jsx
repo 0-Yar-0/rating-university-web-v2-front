@@ -30,14 +30,14 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
             const next = { ...prev, ...patch };
             const first = rows[0];
             if (first && first.calcResultId) {
-                // API умеет сохранять только четыре основные метрики
-                Api.updateMetricNames({
-                    calcResultId: first.calcResultId,
-                    codeB11: next.codeB11,
-                    codeB12: next.codeB12,
-                    codeB13: next.codeB13,
-                    codeB21: next.codeB21,
-                }).catch((e) => console.warn('Ошибка сохранения имён метрик', e));
+                const dto = { calcResultId: first.calcResultId };
+                // copy all codeBxx properties present in the state
+                Object.keys(next).forEach((k) => {
+                    if (k.startsWith('codeB')) {
+                        dto[k] = next[k];
+                    }
+                });
+                Api.updateMetricNames(dto).catch((e) => console.warn('Ошибка сохранения имён метрик', e));
             } else {
                 console.warn('Нет calcResultId, имена метрик не отправлены на сервер');
             }

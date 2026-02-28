@@ -43,6 +43,31 @@ const DEFAULT_B_PARAMS = {
     VO: '',
     PO: '',
     B33_o: '',
+    // inputs for B34..B44
+    NR2023: '',
+    NR2024: '',
+    NR2025: '',
+    WL2022: '',
+    WL2023: '',
+    WL2024: '',
+    NPR2022: '',
+    NPR2023: '',
+    NPR2024: '',
+    DN2022: '',
+    DN2023: '',
+    DN2024: '',
+    Io: '',
+    Iv: '',
+    Iz: '',
+    No: '',
+    Nv: '',
+    Nz: '',
+    OD2022: '',
+    OD2023: '',
+    OD2024: '',
+    PN2022: '',
+    PN2023: '',
+    PN2024: '',
 };
 
 function normalizeNumber(v) {
@@ -88,6 +113,31 @@ function buildExportPayload(years, paramsB) {
                 VO: normalizeNumber(p.VO),
                 PO: normalizeNumber(p.PO),
                 B33_o: normalizeNumber(p.B33_o),
+                // additional inputs for B34..B44
+                NR2023: normalizeNumber(p.NR2023),
+                NR2024: normalizeNumber(p.NR2024),
+                NR2025: normalizeNumber(p.NR2025),
+                WL2022: normalizeNumber(p.WL2022),
+                WL2023: normalizeNumber(p.WL2023),
+                WL2024: normalizeNumber(p.WL2024),
+                NPR2022: normalizeNumber(p.NPR2022),
+                NPR2023: normalizeNumber(p.NPR2023),
+                NPR2024: normalizeNumber(p.NPR2024),
+                DN2022: normalizeNumber(p.DN2022),
+                DN2023: normalizeNumber(p.DN2023),
+                DN2024: normalizeNumber(p.DN2024),
+                Io: normalizeNumber(p.Io),
+                Iv: normalizeNumber(p.Iv),
+                Iz: normalizeNumber(p.Iz),
+                No: normalizeNumber(p.No),
+                Nv: normalizeNumber(p.Nv),
+                Nz: normalizeNumber(p.Nz),
+                OD2022: normalizeNumber(p.OD2022),
+                OD2023: normalizeNumber(p.OD2023),
+                OD2024: normalizeNumber(p.OD2024),
+                PN2022: normalizeNumber(p.PN2022),
+                PN2023: normalizeNumber(p.PN2023),
+                PN2024: normalizeNumber(p.PN2024),
             };
         })
         .filter((row) => row.year);
@@ -201,6 +251,31 @@ export default function InputPage() {
                         VO: row.VO ?? '',
                         PO: row.PO ?? '',
                         B33_o: row.B33_o ?? '',
+                        // new
+                        NR2023: row.NR2023 ?? '',
+                        NR2024: row.NR2024 ?? '',
+                        NR2025: row.NR2025 ?? '',
+                        WL2022: row.WL2022 ?? '',
+                        WL2023: row.WL2023 ?? '',
+                        WL2024: row.WL2024 ?? '',
+                        NPR2022: row.NPR2022 ?? '',
+                        NPR2023: row.NPR2023 ?? '',
+                        NPR2024: row.NPR2024 ?? '',
+                        DN2022: row.DN2022 ?? '',
+                        DN2023: row.DN2023 ?? '',
+                        DN2024: row.DN2024 ?? '',
+                        Io: row.Io ?? '',
+                        Iv: row.Iv ?? '',
+                        Iz: row.Iz ?? '',
+                        No: row.No ?? '',
+                        Nv: row.Nv ?? '',
+                        Nz: row.Nz ?? '',
+                        OD2022: row.OD2022 ?? '',
+                        OD2023: row.OD2023 ?? '',
+                        OD2024: row.OD2024 ?? '',
+                        PN2022: row.PN2022 ?? '',
+                        PN2023: row.PN2023 ?? '',
+                        PN2024: row.PN2024 ?? '',
                     };
                 }
 
@@ -227,12 +302,14 @@ export default function InputPage() {
                         ? items.find(item => item.iter === _selectedIteration)?.results
                         : items.reduce((maxItem, item) => item.iter > maxItem.iter ? item : maxItem).results;
 
-                    setMetricNames({
-                        codeB11: results[0].codeB11 || 'B11',
-                        codeB12: results[0].codeB12 || 'B12',
-                        codeB13: results[0].codeB13 || 'B13',
-                        codeB21: results[0].codeB21 || 'B21',
+                    const firstRes = results[0] || {};
+                    const newNames = {};
+                    Object.keys(firstRes).forEach((k) => {
+                        if (k.startsWith('codeB')) {
+                            newNames[k] = firstRes[k] || k.toUpperCase();
+                        }
                     });
+                    setMetricNames(newNames);
                 }
 
                 setRows(results)
@@ -500,6 +577,41 @@ export default function InputPage() {
             ['PO','PO'],
         ],
         11: [['B33_o','B33_o']],
+        // new input groups for formulas B34..B44
+        12: [
+            ['NR2023','NR2023'],
+            ['NR2024','NR2024'],
+            ['NR2025','NR2025'],
+        ],
+        13: [
+            ['WL2022','WL2022'],
+            ['WL2023','WL2023'],
+            ['WL2024','WL2024'],
+            ['NPR2022','NPR2022'],
+            ['NPR2023','NPR2023'],
+            ['NPR2024','NPR2024'],
+        ],
+        14: [
+            ['DN2022','DN2022'],
+            ['DN2023','DN2023'],
+            ['DN2024','DN2024'],
+        ],
+        15: [
+            ['Io','Io'],
+            ['Iv','Iv'],
+            ['Iz','Iz'],
+            ['No','No'],
+            ['Nv','Nv'],
+            ['Nz','Nz'],
+        ],
+        16: [
+            ['OD2022','OD2022'],
+            ['OD2023','OD2023'],
+            ['OD2024','OD2024'],
+            ['PN2022','PN2022'],
+            ['PN2023','PN2023'],
+            ['PN2024','PN2024'],
+        ],
     };
 
     return (

@@ -28,14 +28,15 @@ export default function ResultsTable({
         const patch = { [editingKey]: editValue || editingKey.toUpperCase() };
         console.log('commitEdit, patch = ', patch);
 
-        // 👉 только говорим родителю, что поменялось
+        // send patch to parent handler
         onMetricNamesChange(patch);
 
         setEditingKey(null);
         setEditValue('');
     };
 
-    const editableMetrics = ['b11','b12','b13','b21'];
+    // every metric key should be editable; API will ignore extras it doesn't support
+    const editableMetrics = metricKeys.slice();
 
     const renderHeaderCell = (key, label) => (
         <th className="results-table-header">
