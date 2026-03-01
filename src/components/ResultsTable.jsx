@@ -85,7 +85,7 @@ export default function ResultsTable({
                                 );
                             }
                         })}
-                        <th className="results-table-header">Total B</th>
+                        <th className="results-table-header">Сумма баллов</th>
                         <th className="results-table-header">Показать</th>
                     </tr>
                 </thead>
