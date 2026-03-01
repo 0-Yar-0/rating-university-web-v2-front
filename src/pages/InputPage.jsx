@@ -25,9 +25,15 @@ const DEFAULT_B_PARAMS = {
     beta211: '',
     beta212: '',
     // extended inputs
-    NBP: '',
-    NMP: '',
-    ACP: '',
+    NBo: '',
+    NBv: '',
+    NBz: '',
+    NMo: '',
+    NMv: '',
+    NMz: '',
+    ACo: '',
+    ACv: '',
+    ACz: '',
     OPC: '',
     ACC: '',
     PKP: '',
@@ -137,9 +143,15 @@ function buildExportPayload(years, paramsB) {
                 beta211: normalizeNumber(p.beta211),
                 beta212: normalizeNumber(p.beta212),
                 // extended
-                NBP: normalizeNumber(p.NBP),
-                NMP: normalizeNumber(p.NMP),
-                ACP: normalizeNumber(p.ACP),
+                NBo: normalizeNumber(p.NBo),
+                NBv: normalizeNumber(p.NBv),
+                NBz: normalizeNumber(p.NBz),
+                NMo: normalizeNumber(p.NMo),
+                NMv: normalizeNumber(p.NMv),
+                NMz: normalizeNumber(p.NMz),
+                ACo: normalizeNumber(p.ACo),
+                ACv: normalizeNumber(p.ACv),
+                ACz: normalizeNumber(p.ACz),
                 OPC: normalizeNumber(p.OPC),
                 ACC: normalizeNumber(p.ACC),
                 PKP: normalizeNumber(p.PKP),
@@ -278,9 +290,15 @@ export default function InputPage() {
                         beta211: row.beta211 ?? '',
                         beta212: row.beta212 ?? '',
                         // extended
-                        NBP: row.NBP ?? '',
-                        NMP: row.NMP ?? '',
-                        ACP: row.ACP ?? '',
+                        NBo: firstDefinedValue(row.NBo, row.NBP),
+                        NBv: firstDefinedValue(row.NBv, ''),
+                        NBz: firstDefinedValue(row.NBz, ''),
+                        NMo: firstDefinedValue(row.NMo, row.NMP),
+                        NMv: firstDefinedValue(row.NMv, ''),
+                        NMz: firstDefinedValue(row.NMz, ''),
+                        ACo: firstDefinedValue(row.ACo, row.ACP),
+                        ACv: firstDefinedValue(row.ACv, ''),
+                        ACz: firstDefinedValue(row.ACz, ''),
                         OPC: row.OPC ?? '',
                         ACC: row.ACC ?? '',
                         PKP: row.PKP ?? '',
@@ -495,9 +513,15 @@ export default function InputPage() {
                     beta211: row.beta211 ?? '',
                     beta212: row.beta212 ?? '',
                     // extended
-                    NBP: row.NBP ?? '',
-                    NMP: row.NMP ?? '',
-                    ACP: row.ACP ?? '',
+                    NBo: firstDefinedValue(row.NBo, row.NBP),
+                    NBv: firstDefinedValue(row.NBv, ''),
+                    NBz: firstDefinedValue(row.NBz, ''),
+                    NMo: firstDefinedValue(row.NMo, row.NMP),
+                    NMv: firstDefinedValue(row.NMv, ''),
+                    NMz: firstDefinedValue(row.NMz, ''),
+                    ACo: firstDefinedValue(row.ACo, row.ACP),
+                    ACv: firstDefinedValue(row.ACv, ''),
+                    ACz: firstDefinedValue(row.ACz, ''),
                     OPC: row.OPC ?? '',
                     ACC: row.ACC ?? '',
                     PKP: row.PKP ?? '',
@@ -594,11 +618,18 @@ export default function InputPage() {
 
     const params = paramsB[currentYear] || DEFAULT_B_PARAMS;
 
-    const b25b26Fields = (() => {
+    const b25Fields = (() => {
         const out = [['k', 'k']];
         for (const y of yearsByK(getKYears(params))) {
             out.push([`CHPSi${y}`, `ЧПСi${y}`]);
             out.push([`CHPi${y}`, `ЧПi${y}`]);
+        }
+        return out;
+    })();
+
+    const b26Fields = (() => {
+        const out = [];
+        for (const y of yearsByK(getKYears(params))) {
             out.push([`CHOSi${y}`, `ЧОСi${y}`]);
             out.push([`CHOi${y}`, `ЧОi${y}`]);
         }
@@ -638,9 +669,15 @@ export default function InputPage() {
         ],
         // extended metric groups (generic headings)
         5: [
-            ['NBP','NBP'],
-            ['NMP','NMP'],
-            ['ACP','ACP'],
+            ['NBo','NBo'],
+            ['NBv','NBv'],
+            ['NBz','NBz'],
+            ['NMo','NMo'],
+            ['NMv','NMv'],
+            ['NMz','NMz'],
+            ['ACo','ACo'],
+            ['ACv','ACv'],
+            ['ACz','ACz'],
             ['OPC','OPC'],
             ['ACC','ACC'],
         ],
@@ -651,23 +688,24 @@ export default function InputPage() {
             ['NOA','NOA'],
         ],
         7: [['NAP','NAP']],
-        8: b25b26Fields,
-        9: [
+        8: b25Fields,
+        9: b26Fields,
+        10: [
             ['UT','UT'],
             ['DO','DO'],
         ],
-        10: [
+        11: [
             ['N','N'],
             ['Npr','Npr'],
             ['VO','VO'],
             ['PO','PO'],
         ],
-        11: [['B33_o','B33_o']],
+        12: [['B33_o','B33_o']],
         // new input groups for formulas B34..B44
-        12: b34Fields,
-        13: b41Fields,
-        14: b42Fields,
-        15: [
+        13: b34Fields,
+        14: b41Fields,
+        15: b42Fields,
+        16: [
             ['Io','Io'],
             ['Iv','Iv'],
             ['Iz','Iz'],
@@ -675,7 +713,7 @@ export default function InputPage() {
             ['Nv','Nv'],
             ['Nz','Nz'],
         ],
-        16: b44Fields,
+        17: b44Fields,
     };
 
     return (
