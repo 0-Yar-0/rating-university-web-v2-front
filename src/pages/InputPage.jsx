@@ -8,6 +8,7 @@ import MenuDropdown from '../components/MenuDropdown.jsx';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 const YEAR_NOW = new Date().getFullYear();
+const B25_B26_START_YEAR = 2022;
 const STORAGE_KEY = 'unirating_b_params_v2';
 const STORAGE_KEY_ITERATION = 'selected_iteration';
 
@@ -34,8 +35,19 @@ const DEFAULT_B_PARAMS = {
     NP: '',
     NOA: '',
     NAP: '',
-    B25_o: '',
-    B26_o: '',
+    k: '3',
+    CHPSi2022: '',
+    CHPi2022: '',
+    CHOSi2022: '',
+    CHOi2022: '',
+    CHPSi2023: '',
+    CHPi2023: '',
+    CHOSi2023: '',
+    CHOi2023: '',
+    CHPSi2024: '',
+    CHPi2024: '',
+    CHOSi2024: '',
+    CHOi2024: '',
     UT: '',
     DO: '',
     N: '',
@@ -65,9 +77,18 @@ const DEFAULT_B_PARAMS = {
     OD2022: '',
     OD2023: '',
     OD2024: '',
-    PN2022: '',
-    PN2023: '',
-    PN2024: '',
+    NO2022: '',
+    NV2022: '',
+    NZ2022: '',
+    NOA2022: '',
+    NO2023: '',
+    NV2023: '',
+    NZ2023: '',
+    NOA2023: '',
+    NO2024: '',
+    NV2024: '',
+    NZ2024: '',
+    NOA2024: '',
 };
 
 function normalizeNumber(v) {
@@ -76,11 +97,33 @@ function normalizeNumber(v) {
     return Number.isNaN(n) ? null : n;
 }
 
+function getKYears(params) {
+    const raw = Number(String(params?.k ?? '').replace(',', '.'));
+    const k = Number.isFinite(raw) ? Math.round(raw) : 3;
+    return Math.max(1, k);
+}
+
+function yearsByKFrom(startYear, k) {
+    return Array.from({ length: Math.max(1, k) }, (_, i) => startYear + i);
+}
+
+function yearsByK(k) {
+    return yearsByKFrom(B25_B26_START_YEAR, k);
+}
+
+function firstDefinedValue(...values) {
+    for (const value of values) {
+        if (value !== undefined && value !== null && value !== '') return value;
+    }
+    return '';
+}
+
 function buildExportPayload(years, paramsB) {
     const bData = years
         .map((year) => {
             const p = paramsB[year] || DEFAULT_B_PARAMS;
-            return {
+            const kYears = getKYears(p);
+            const row = {
                 year,
                 ENa: normalizeNumber(p.ENa),
                 ENb: normalizeNumber(p.ENb),
@@ -104,8 +147,7 @@ function buildExportPayload(years, paramsB) {
                 NP: normalizeNumber(p.NP),
                 NOA: normalizeNumber(p.NOA),
                 NAP: normalizeNumber(p.NAP),
-                B25_o: normalizeNumber(p.B25_o),
-                B26_o: normalizeNumber(p.B26_o),
+                k: kYears,
                 UT: normalizeNumber(p.UT),
                 DO: normalizeNumber(p.DO),
                 N: normalizeNumber(p.N),
@@ -113,32 +155,36 @@ function buildExportPayload(years, paramsB) {
                 VO: normalizeNumber(p.VO),
                 PO: normalizeNumber(p.PO),
                 B33_o: normalizeNumber(p.B33_o),
-                // additional inputs for B34..B44
-                NR2023: normalizeNumber(p.NR2023),
-                NR2024: normalizeNumber(p.NR2024),
-                NR2025: normalizeNumber(p.NR2025),
-                WL2022: normalizeNumber(p.WL2022),
-                WL2023: normalizeNumber(p.WL2023),
-                WL2024: normalizeNumber(p.WL2024),
-                NPR2022: normalizeNumber(p.NPR2022),
-                NPR2023: normalizeNumber(p.NPR2023),
-                NPR2024: normalizeNumber(p.NPR2024),
-                DN2022: normalizeNumber(p.DN2022),
-                DN2023: normalizeNumber(p.DN2023),
-                DN2024: normalizeNumber(p.DN2024),
                 Io: normalizeNumber(p.Io),
                 Iv: normalizeNumber(p.Iv),
                 Iz: normalizeNumber(p.Iz),
                 No: normalizeNumber(p.No),
                 Nv: normalizeNumber(p.Nv),
                 Nz: normalizeNumber(p.Nz),
-                OD2022: normalizeNumber(p.OD2022),
-                OD2023: normalizeNumber(p.OD2023),
-                OD2024: normalizeNumber(p.OD2024),
-                PN2022: normalizeNumber(p.PN2022),
-                PN2023: normalizeNumber(p.PN2023),
-                PN2024: normalizeNumber(p.PN2024),
             };
+
+            for (const y of yearsByKFrom(2023, kYears)) {
+                row[`NR${y}`] = normalizeNumber(p[`NR${y}`]);
+            }
+            for (const y of yearsByKFrom(2022, kYears)) {
+                row[`WL${y}`] = normalizeNumber(p[`WL${y}`]);
+                row[`NPR${y}`] = normalizeNumber(p[`NPR${y}`]);
+                row[`DN${y}`] = normalizeNumber(p[`DN${y}`]);
+                row[`OD${y}`] = normalizeNumber(p[`OD${y}`]);
+                row[`NO${y}`] = normalizeNumber(p[`NO${y}`]);
+                row[`NV${y}`] = normalizeNumber(p[`NV${y}`]);
+                row[`NZ${y}`] = normalizeNumber(p[`NZ${y}`]);
+                row[`NOA${y}`] = normalizeNumber(p[`NOA${y}`]);
+            }
+
+            for (const y of yearsByK(kYears)) {
+                row[`CHPSi${y}`] = normalizeNumber(p[`CHPSi${y}`]);
+                row[`CHPi${y}`] = normalizeNumber(p[`CHPi${y}`]);
+                row[`CHOSi${y}`] = normalizeNumber(p[`CHOSi${y}`]);
+                row[`CHOi${y}`] = normalizeNumber(p[`CHOi${y}`]);
+            }
+
+            return row;
         })
         .filter((row) => row.year);
 
@@ -242,8 +288,7 @@ export default function InputPage() {
                         NP: row.NP ?? '',
                         NOA: row.NOA ?? '',
                         NAP: row.NAP ?? '',
-                        B25_o: row.B25_o ?? '',
-                        B26_o: row.B26_o ?? '',
+                        k: firstDefinedValue(row.k, row.K, 3),
                         UT: row.UT ?? '',
                         DO: row.DO ?? '',
                         N: row.N ?? '',
@@ -251,32 +296,34 @@ export default function InputPage() {
                         VO: row.VO ?? '',
                         PO: row.PO ?? '',
                         B33_o: row.B33_o ?? '',
-                        // new
-                        NR2023: row.NR2023 ?? '',
-                        NR2024: row.NR2024 ?? '',
-                        NR2025: row.NR2025 ?? '',
-                        WL2022: row.WL2022 ?? '',
-                        WL2023: row.WL2023 ?? '',
-                        WL2024: row.WL2024 ?? '',
-                        NPR2022: row.NPR2022 ?? '',
-                        NPR2023: row.NPR2023 ?? '',
-                        NPR2024: row.NPR2024 ?? '',
-                        DN2022: row.DN2022 ?? '',
-                        DN2023: row.DN2023 ?? '',
-                        DN2024: row.DN2024 ?? '',
                         Io: row.Io ?? '',
                         Iv: row.Iv ?? '',
                         Iz: row.Iz ?? '',
                         No: row.No ?? '',
                         Nv: row.Nv ?? '',
                         Nz: row.Nz ?? '',
-                        OD2022: row.OD2022 ?? '',
-                        OD2023: row.OD2023 ?? '',
-                        OD2024: row.OD2024 ?? '',
-                        PN2022: row.PN2022 ?? '',
-                        PN2023: row.PN2023 ?? '',
-                        PN2024: row.PN2024 ?? '',
                     };
+
+                    const dynamicYears = yearsByK(getKYears(map[row.year]));
+                    for (const y of dynamicYears) {
+                        map[row.year][`CHPSi${y}`] = firstDefinedValue(row[`CHPSi${y}`], row[`ЧПСi${y}`], row[`CPSi${y}`]);
+                        map[row.year][`CHPi${y}`] = firstDefinedValue(row[`CHPi${y}`], row[`ЧПi${y}`], row[`CPi${y}`]);
+                        map[row.year][`CHOSi${y}`] = firstDefinedValue(row[`CHOSi${y}`], row[`ЧОСi${y}`], row[`COSi${y}`]);
+                        map[row.year][`CHOi${y}`] = firstDefinedValue(row[`CHOi${y}`], row[`ЧОi${y}`], row[`COi${y}`]);
+                    }
+                    for (const y of yearsByKFrom(2023, getKYears(map[row.year]))) {
+                        map[row.year][`NR${y}`] = firstDefinedValue(row[`NR${y}`]);
+                    }
+                    for (const y of yearsByKFrom(2022, getKYears(map[row.year]))) {
+                        map[row.year][`WL${y}`] = firstDefinedValue(row[`WL${y}`]);
+                        map[row.year][`NPR${y}`] = firstDefinedValue(row[`NPR${y}`]);
+                        map[row.year][`DN${y}`] = firstDefinedValue(row[`DN${y}`]);
+                        map[row.year][`OD${y}`] = firstDefinedValue(row[`OD${y}`]);
+                        map[row.year][`NO${y}`] = firstDefinedValue(row[`NO${y}`], row[`No${y}`]);
+                        map[row.year][`NV${y}`] = firstDefinedValue(row[`NV${y}`], row[`Nv${y}`]);
+                        map[row.year][`NZ${y}`] = firstDefinedValue(row[`NZ${y}`], row[`Nz${y}`]);
+                        map[row.year][`NOA${y}`] = firstDefinedValue(row[`NOA${y}`], row[`Noa${y}`]);
+                    }
                 }
 
                 const uniqueYears = [...new Set(ys)].sort((a, b) => b - a);
@@ -458,8 +505,7 @@ export default function InputPage() {
                     NP: row.NP ?? '',
                     NOA: row.NOA ?? '',
                     NAP: row.NAP ?? '',
-                    B25_o: row.B25_o ?? '',
-                    B26_o: row.B26_o ?? '',
+                    k: firstDefinedValue(row.k, row.K, 3),
                     UT: row.UT ?? '',
                     DO: row.DO ?? '',
                     N: row.N ?? '',
@@ -468,6 +514,27 @@ export default function InputPage() {
                     PO: row.PO ?? '',
                     B33_o: row.B33_o ?? '',
                 };
+
+                const dynamicYears = yearsByK(getKYears(map[row.year]));
+                for (const y of dynamicYears) {
+                    map[row.year][`CHPSi${y}`] = firstDefinedValue(row[`CHPSi${y}`], row[`ЧПСi${y}`], row[`CPSi${y}`]);
+                    map[row.year][`CHPi${y}`] = firstDefinedValue(row[`CHPi${y}`], row[`ЧПi${y}`], row[`CPi${y}`]);
+                    map[row.year][`CHOSi${y}`] = firstDefinedValue(row[`CHOSi${y}`], row[`ЧОСi${y}`], row[`COSi${y}`]);
+                    map[row.year][`CHOi${y}`] = firstDefinedValue(row[`CHOi${y}`], row[`ЧОi${y}`], row[`COi${y}`]);
+                }
+                for (const y of yearsByKFrom(2023, getKYears(map[row.year]))) {
+                    map[row.year][`NR${y}`] = firstDefinedValue(row[`NR${y}`]);
+                }
+                for (const y of yearsByKFrom(2022, getKYears(map[row.year]))) {
+                    map[row.year][`WL${y}`] = firstDefinedValue(row[`WL${y}`]);
+                    map[row.year][`NPR${y}`] = firstDefinedValue(row[`NPR${y}`]);
+                    map[row.year][`DN${y}`] = firstDefinedValue(row[`DN${y}`]);
+                    map[row.year][`OD${y}`] = firstDefinedValue(row[`OD${y}`]);
+                    map[row.year][`NO${y}`] = firstDefinedValue(row[`NO${y}`], row[`No${y}`]);
+                    map[row.year][`NV${y}`] = firstDefinedValue(row[`NV${y}`], row[`Nv${y}`]);
+                    map[row.year][`NZ${y}`] = firstDefinedValue(row[`NZ${y}`], row[`Nz${y}`]);
+                    map[row.year][`NOA${y}`] = firstDefinedValue(row[`NOA${y}`], row[`Noa${y}`]);
+                }
             }
             const uniqueYears = [...new Set(ys)].sort((a, b) => a - b);
             if (!uniqueYears.length) throw new Error('Пустые данные');
@@ -527,6 +594,28 @@ export default function InputPage() {
 
     const params = paramsB[currentYear] || DEFAULT_B_PARAMS;
 
+    const b25b26Fields = (() => {
+        const out = [['k', 'k']];
+        for (const y of yearsByK(getKYears(params))) {
+            out.push([`CHPSi${y}`, `ЧПСi${y}`]);
+            out.push([`CHPi${y}`, `ЧПi${y}`]);
+            out.push([`CHOSi${y}`, `ЧОСi${y}`]);
+            out.push([`CHOi${y}`, `ЧОi${y}`]);
+        }
+        return out;
+    })();
+
+    const b34Fields = yearsByKFrom(2023, getKYears(params)).map((y) => [`NR${y}`, `NR${y}`]);
+    const b41Fields = yearsByKFrom(2022, getKYears(params)).flatMap((y) => [[`WL${y}`, `WL${y}`], [`NPR${y}`, `NPR${y}`]]);
+    const b42Fields = yearsByKFrom(2022, getKYears(params)).map((y) => [`DN${y}`, `DN${y}`]);
+    const b44Fields = yearsByKFrom(2022, getKYears(params)).flatMap((y) => [
+        [`OD${y}`, `OD${y}`],
+        [`NO${y}`, `NO_${y}`],
+        [`NV${y}`, `NV_${y}`],
+        [`NZ${y}`, `NZ_${y}`],
+        [`NOA${y}`, `NOA_${y}`],
+    ]);
+
     const fieldsByGroup = {
         1: [
             ['ENa', 'ENa'],
@@ -562,10 +651,7 @@ export default function InputPage() {
             ['NOA','NOA'],
         ],
         7: [['NAP','NAP']],
-        8: [
-            ['B25_o','B25_o'],
-            ['B26_o','B26_o'],
-        ],
+        8: b25b26Fields,
         9: [
             ['UT','UT'],
             ['DO','DO'],
@@ -578,24 +664,9 @@ export default function InputPage() {
         ],
         11: [['B33_o','B33_o']],
         // new input groups for formulas B34..B44
-        12: [
-            ['NR2023','NR2023'],
-            ['NR2024','NR2024'],
-            ['NR2025','NR2025'],
-        ],
-        13: [
-            ['WL2022','WL2022'],
-            ['WL2023','WL2023'],
-            ['WL2024','WL2024'],
-            ['NPR2022','NPR2022'],
-            ['NPR2023','NPR2023'],
-            ['NPR2024','NPR2024'],
-        ],
-        14: [
-            ['DN2022','DN2022'],
-            ['DN2023','DN2023'],
-            ['DN2024','DN2024'],
-        ],
+        12: b34Fields,
+        13: b41Fields,
+        14: b42Fields,
         15: [
             ['Io','Io'],
             ['Iv','Iv'],
@@ -604,14 +675,7 @@ export default function InputPage() {
             ['Nv','Nv'],
             ['Nz','Nz'],
         ],
-        16: [
-            ['OD2022','OD2022'],
-            ['OD2023','OD2023'],
-            ['OD2024','OD2024'],
-            ['PN2022','PN2022'],
-            ['PN2023','PN2023'],
-            ['PN2024','PN2024'],
-        ],
+        16: b44Fields,
     };
 
     return (
