@@ -581,6 +581,9 @@ export default function InputPage() {
                     VO: row.VO ?? '',
                     PO: row.PO ?? '',
                     B33_o: row.B33_o ?? '',
+                    Io: row.Io ?? '',
+                    Iv: row.Iv ?? '',
+                    Iz: row.Iz ?? '',
                 };
 
                 const dynamicYears = yearsByK(getKYears(map[row.year]));
