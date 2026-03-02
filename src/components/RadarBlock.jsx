@@ -10,6 +10,26 @@ import {
     ResponsiveContainer
 } from 'recharts';
 
+const METRIC_MAX = {
+    b11: 23,
+    b12: 3,
+    b13: 4,
+    b21: 2,
+    b22: 6,
+    b23: 6,
+    b24: 6,
+    b25: 1,
+    b26: 1,
+    b31: 13,
+    b32: 5,
+    b33: 12,
+    b34: 2,
+    b41: 5,
+    b42: 5,
+    b43: 5,
+    b44: 5,
+};
+
 /**
  * rows: активные строки (учитывая чекбоксы)
  * metricNames: { codeB11, codeB12, codeB13, codeB21 }
@@ -33,8 +53,11 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [] }) {
     // [{ metric: 'B11', y_2024: ..., y_2025: ... }, ...]
     const data = metrics.map((m) => {
         const row = { metric: m.label };
+        const metricMax = METRIC_MAX[m.key] ?? 1;
         rows.forEach((r) => {
-            row[`y_${r.year}`] = r[m.key];
+            const rawValue = Number(r[m.key]) || 0;
+            const normalized = metricMax > 0 ? (rawValue / metricMax) * 100 : 0;
+            row[`y_${r.year}`] = Math.min(Math.max(normalized, 0), 100);
         });
         return row;
     });
@@ -50,7 +73,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [] }) {
                 >
                     <PolarGrid />
                     <PolarAngleAxis dataKey="metric" />
-                    <PolarRadiusAxis />
+                    <PolarRadiusAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
                     <Tooltip />
                     <Legend />
                     {rows.map((r, idx) => (
