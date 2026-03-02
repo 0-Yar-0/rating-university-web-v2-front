@@ -65,6 +65,11 @@ export default function ResultsTable({
         </th>
     );
 
+    const formatNumber = (value) => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return value;
+        return value.toFixed(3).replace(/\.?0+$/, '');
+    };
+
     return (
         <div className="card results-table-wrapper">
             <table className="results-table">
@@ -95,10 +100,10 @@ export default function ResultsTable({
                             <td className="results-table-cell">{r.year}</td>
                             {metricKeys.map((k) => (
                                 <td key={k} className="results-table-cell">
-                                    {typeof r[k] === 'number' ? r[k].toFixed(2) : r[k]}
+                                    {formatNumber(r[k])}
                                 </td>
                             ))}
-                            <td className="results-table-cell">{r.sumB.toFixed(2)}</td>
+                            <td className="results-table-cell">{formatNumber(r.sumB)}</td>
                             <td className="results-table-cell" style={{ textAlign: 'center' }}>
                                 <input
                                     type="checkbox"
