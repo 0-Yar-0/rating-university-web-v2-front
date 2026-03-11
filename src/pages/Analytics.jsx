@@ -10,6 +10,7 @@ const STORAGE_KEY = 'unirating_b_params_v2';
 export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
     // какие годы отображать (true = показываем)
     const [visibleYears, setVisibleYears] = useState({});
+    const [radarViewMode, setRadarViewMode] = useState('percent');
 
     // список ключей метрик (b11, b12, ... b33) вычисляется из первой строки
     const metricKeys = rows.length
@@ -68,8 +69,26 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
 
     return (
         <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <span>Паутинная диаграмма:</span>
+                <select
+                    className="num-input"
+                    value={radarViewMode}
+                    onChange={(e) => setRadarViewMode(e.target.value)}
+                    style={{ maxWidth: 280 }}
+                >
+                    <option value="percent">Через проценты</option>
+                    <option value="value">Через значения</option>
+                </select>
+            </div>
+
             <div className="display-flex">
-                <RadarBlock rows={activeRows} metricNames={metricNames} metricKeys={metricKeys} />
+                <RadarBlock
+                    rows={activeRows}
+                    metricNames={metricNames}
+                    metricKeys={metricKeys}
+                    viewMode={radarViewMode}
+                />
                 <LineGraphBlock rows={activeRows} />
             </div>
 

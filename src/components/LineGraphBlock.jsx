@@ -14,13 +14,22 @@ export default function LineGraphBlock({ rows }) {
         total: r.sumB,
     }));
 
+    const totals = data
+        .map((point) => Number(point.total))
+        .filter((value) => Number.isFinite(value));
+    const minTotal = totals.length ? Math.min(...totals) : 0;
+    const maxTotal = totals.length ? Math.max(...totals) : 0;
+    const span = maxTotal - minTotal;
+    const pad = span > 0 ? span * 0.1 : Math.max(1, Math.abs(minTotal) * 0.05);
+    const yDomain = [minTotal - pad, maxTotal + pad];
+
     return (
         <div className="card flex-1">
             <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={data} margin={{ top: 20, right: 40, left: 0, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" />
-                    <YAxis />
+                    <YAxis domain={yDomain} />
                     <Tooltip />
                     <Line type="monotone" dataKey="total" stroke="#82ca9d" dot />
                 </LineChart>

@@ -34,7 +34,7 @@ const METRIC_MAX = {
  * rows: активные строки (учитывая чекбоксы)
  * metricNames: { codeB11, codeB12, codeB13, codeB21 }
  */
-export default function RadarBlock({ rows, metricNames, metricKeys = [] }) {
+export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMode = 'percent' }) {
     if (!rows || !rows.length) {
         return (
             <div className="card radar-card">
@@ -56,11 +56,27 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [] }) {
         const metricMax = METRIC_MAX[m.key] ?? 1;
         rows.forEach((r) => {
             const rawValue = Number(r[m.key]) || 0;
-            const normalized = metricMax > 0 ? (rawValue / metricMax) * 100 : 0;
-            row[`y_${r.year}`] = Math.min(Math.max(normalized, 0), 100);
+            if (viewMode === 'value') {
+                row[`y_${r.year}`] = rawValue;
+            } else {
+                const normalized = metricMax > 0 ? (rawValue / metricMax) * 100 : 0;
+                row[`y_${r.year}`] = Math.min(Math.max(normalized, 0), 100);
+            }
         });
         return row;
     });
+
+    const allValues = rows.flatMap((r) =>
+        metrics.map((m) => {
+            const value = Number(r[m.key]);
+            if (!Number.isFinite(value)) return 0;
+            if (viewMode === 'value') return value;
+            const metricMax = METRIC_MAX[m.key] ?? 1;
+            return metricMax > 0 ? (value / metricMax) * 100 : 0;
+        }),
+    );
+    const maxValue = Math.max(...allValues, 0);
+    const radiusMax = viewMode === 'value' ? Math.max(1, Math.ceil(maxValue)) : 100;
 
     const COLORS = ['#2563EB', '#22C55E', '#F97316', '#E11D48', '#0EA5E9', '#A855F7'];
 
@@ -73,8 +89,11 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [] }) {
                 >
                     <PolarGrid />
                     <PolarAngleAxis dataKey="metric" />
-                    <PolarRadiusAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
-                    <Tooltip />
+                    <PolarRadiusAxis
+                        domain={[0, radiusMax]}
+                        tickFormatter={(value) => (viewMode === 'value' ? value : `${value}%`)}
+                    />
+                    <Tooltip formatter={(value) => (viewMode === 'value' ? value : `${Number(value).toFixed(1)}%`)} />
                     <Legend />
                     {rows.map((r, idx) => (
                         <Radar
