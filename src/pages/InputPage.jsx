@@ -464,7 +464,18 @@ export default function InputPage() {
 
                 setYears(uniqueYears);
                 setCurrentYear(uniqueYears[0]);
-                setParamsB(map);
+                setParamsB((prev) => {
+                    const merged = { ...prev };
+                    for (const year of uniqueYears) {
+                        const incoming = map[year] || { ...DEFAULT_B_PARAMS };
+                        const existing = prev?.[year] || {};
+                        merged[year] = {
+                            ...incoming,
+                            B22: firstDefinedValue(existing.B22, incoming.B22),
+                        };
+                    }
+                    return merged;
+                });
             })
             .catch(() => { })
             .finally(() => {
@@ -495,6 +506,20 @@ export default function InputPage() {
 
                 setRows(results)
                 setItems(items)
+
+                setParamsB((prev) => {
+                    if (!results?.length) return prev;
+                    const merged = { ...prev };
+                    for (const row of results) {
+                        if (!row?.year) continue;
+                        const existing = merged[row.year] || { ...DEFAULT_B_PARAMS };
+                        merged[row.year] = {
+                            ...existing,
+                            B22: firstDefinedValue(existing.B22, row.B22, row.b22),
+                        };
+                    }
+                    return merged;
+                });
             })
     }, [selectedIteration]);
 
