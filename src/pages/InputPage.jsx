@@ -890,8 +890,7 @@ export default function InputPage() {
 
     const totalsModeGroupTitles = {
         1: 'Корректирующий коэффициент',
-        2: 'Подпараметры B22',
-        3: 'Параметры B',
+        2: 'Параметры B',
     };
 
     const metricModeGroupTitles = {
@@ -991,8 +990,7 @@ export default function InputPage() {
     const fieldsByGroup = inputMode === 'totals'
         ? {
             1: correctiveCoefficientFields,
-            2: b22SubParamsFields,
-            3: totalsFields,
+            2: totalsFields,
         }
         : fieldsByGroupMetrics;
 
