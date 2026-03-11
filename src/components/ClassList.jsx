@@ -1,7 +1,7 @@
 import React from 'react';
 import NumericField from './NumericField'; // Adjust the import path as needed
 
-const ClassList = ({ className, fieldsByGroup, params, handleParamChange, metricNames }) => {
+const ClassList = ({ className, fieldsByGroup, params, handleParamChange, metricNames, groupTitles = {} }) => {
     const metricNamesArray = Object.values(metricNames);
 
     return (
@@ -9,7 +9,7 @@ const ClassList = ({ className, fieldsByGroup, params, handleParamChange, metric
             <h2>{className}</h2>
             {Object.keys(fieldsByGroup).map((group, i) => (
                 <div key={group} className="group-list">
-                    <h3>{metricNamesArray[i] || `Параметр ${group}`}</h3>
+                    <h3>{groupTitles[group] || metricNamesArray[i] || `Параметр ${group}`}</h3>
                     <div className="params-grid">
                         {fieldsByGroup[group].map(([key, label]) => (
                             <NumericField

@@ -52,7 +52,13 @@ const DEFAULT_B_PARAMS = {
     NAz: '',
     PNo: '',
     PNv: '',
+    Pz: '',
+    Po: '',
+    Pv: '',
     PNz: '',
+    DIo: '',
+    DIv: '',
+    DIz: '',
     k: '3',
     CHPSi2022: '',
     CHPi2022: '',
@@ -393,6 +399,12 @@ export default function InputPage() {
                         PNo: firstDefinedValue(row.PNo, ''),
                         PNv: firstDefinedValue(row.PNv, ''),
                         PNz: firstDefinedValue(row.PNz, ''),
+                        Po: firstDefinedValue(row.Po, ''),
+                        Pv: firstDefinedValue(row.Pv, ''),
+                        Pz: firstDefinedValue(row.Pz, ''),
+                        DIo: firstDefinedValue(row.DIo, row.DI),
+                        DIv: firstDefinedValue(row.DIv, ''),
+                        DIz: firstDefinedValue(row.DIz, ''),
                         k: firstDefinedValue(row.k, row.K, 3),
                         UT: row.UT ?? '',
                         DO: row.DO ?? '',
@@ -407,7 +419,6 @@ export default function InputPage() {
                         No: row.No ?? '',
                         Nv: row.Nv ?? '',
                         Nz: row.Nz ?? '',
-                        DI: firstDefinedValue(row.DI, row.DIo),
                         B11: firstDefinedValue(row.B11, row.b11),
                         B12: firstDefinedValue(row.B12, row.b12),
                         B13: firstDefinedValue(row.B13, row.b13),
@@ -645,6 +656,9 @@ export default function InputPage() {
                     PNo: firstDefinedValue(row.PNo, ''),
                     PNv: firstDefinedValue(row.PNv, ''),
                     PNz: firstDefinedValue(row.PNz, ''),
+                    DIo: firstDefinedValue(row.DIo, row.DI),
+                    DIv: firstDefinedValue(row.DIv, ''),
+                    DIz: firstDefinedValue(row.DIz, ''),
                     k: firstDefinedValue(row.k, row.K, 3),
                     UT: row.UT ?? '',
                     DO: row.DO ?? '',
@@ -827,28 +841,53 @@ export default function InputPage() {
         ['B44', 'B44'],
     ];
 
+    const correctiveCoefficientFields = [
+        ['PNo', 'PNo'],
+        ['PNv', 'PNv'],
+        ['PNz', 'PNz'],
+        ['DIo', 'Dlo'],
+        ['DIv', 'Dlv'],
+        ['DIz', 'Dlz'],
+    ];
+
+    const totalsModeGroupTitles = {
+        1: 'Корректирующий коэффициент',
+        2: 'Параметры B',
+    };
+
+    const metricModeGroupTitles = {
+        1: 'Корректирующий коэффициент',
+        2: metricNames.codeB11,
+        3: metricNames.codeB12,
+        4: metricNames.codeB13,
+        5: metricNames.codeB21,
+    };
+
     const fieldsByGroupMetrics = {
         1: [
+            ...correctiveCoefficientFields,
+        ],
+        2: [
             ['ENa', 'ENa'],
             ['ENb', 'ENb'],
             ['ENc', 'ENc'],
             ['Eb', 'Eb'],
             ['Ec', 'Ec'],
         ],
-        2: [
+        3: [
             ['beta121', 'β121'],
             ['beta122', 'β122'],
         ],
-        3: [
+        4: [
             ['beta131', 'β131'],
             ['beta132', 'β132'],
         ],
-        4: [
+        5: [
             ['beta211', 'β211'],
             ['beta212', 'β212'],
         ],
         // extended metric groups (generic headings)
-        5: [
+        6: [
             ['NBo','NBo'],
             ['NBv','NBv'],
             ['NBz','NBz'],
@@ -861,7 +900,7 @@ export default function InputPage() {
             ['OPC','OPC'],
             ['ACC','ACC'],
         ],
-        6: [
+        7: [
             ['KPo','KPo'],
             ['KPv','KPv'],
             ['KPz','KPz'],
@@ -873,33 +912,32 @@ export default function InputPage() {
             ['NPz','NPz'],
             ['NOA','NOA'],
         ],
-        7: [
+        8: [
             ['NAo','NAo'],
             ['NAv','NAv'],
             ['NAz','NAz'],
-            ['PNo','PNo'],
-            ['PNv','PNv'],
-            ['PNz','PNz'],
+            ['Po','Po'],
+            ['Pv','Pv'],
+            ['Pz','Pz'],
         ],
-        8: b25Fields,
-        9: b26Fields,
-        10: [
+        9: b25Fields,
+        10: b26Fields,
+        11: [
             ['UT','UT'],
             ['DO','DO'],
         ],
-        11: [
+        12: [
             ['N','N'],
             ['Npr','Npr'],
             ['VO','VO'],
             ['PO','PO'],
         ],
-        12: [['B33','B33']],
+        13: [['B33','B33']],
         // new input groups for formulas B34..B44
-        13: b34Fields,
-        14: b41Fields,
-        15: b42Fields,
-        16: [
-            ['DI','DI'],
+        14: b34Fields,
+        15: b41Fields,
+        16: b42Fields,
+        17: [
             ['Io','Io'],
             ['Iv','Iv'],
             ['Iz','Iz'],
@@ -907,11 +945,14 @@ export default function InputPage() {
             ['Nv','Nv'],
             ['Nz','Nz'],
         ],
-        17: b44Fields,
+        18: b44Fields,
     };
 
     const fieldsByGroup = inputMode === 'totals'
-        ? { 1: totalsFields }
+        ? {
+            1: correctiveCoefficientFields,
+            2: totalsFields,
+        }
         : fieldsByGroupMetrics;
 
     return (
@@ -973,6 +1014,7 @@ export default function InputPage() {
                         params={{}}
                         handleParamChange={handleParamChange}
                         metricNames={{}}
+                        groupTitles={{}}
                     />
                     <ClassList
                         className="Класс B"
@@ -980,6 +1022,7 @@ export default function InputPage() {
                         params={params}
                         handleParamChange={handleParamChange}
                         metricNames={metricNames}
+                        groupTitles={inputMode === 'totals' ? totalsModeGroupTitles : metricModeGroupTitles}
                     />
                     <ClassList
                         className="Класс C"
@@ -987,6 +1030,7 @@ export default function InputPage() {
                         params={{}}
                         handleParamChange={handleParamChange}
                         metricNames={{}}
+                        groupTitles={{}}
                     />
                 </div>
 
