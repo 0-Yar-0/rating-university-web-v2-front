@@ -896,11 +896,23 @@ export default function InputPage() {
 
     const metricModeGroupTitles = {
         1: 'Корректирующий коэффициент',
-        2: metricNames.codeB11,
-        3: metricNames.codeB12,
-        4: metricNames.codeB13,
-        5: metricNames.codeB21,
-        6: 'Подпараметры B22',
+        2: metricNames.codeB11 || 'B11',
+        3: metricNames.codeB12 || 'B12',
+        4: metricNames.codeB13 || 'B13',
+        5: metricNames.codeB21 || 'B21',
+        6: metricNames.codeB22 || 'B22',
+        7: metricNames.codeB23 || 'B23',
+        8: metricNames.codeB24 || 'B24',
+        9: metricNames.codeB25 || 'B25',
+        10: metricNames.codeB26 || 'B26',
+        11: metricNames.codeB31 || 'B31',
+        12: metricNames.codeB32 || 'B32',
+        13: metricNames.codeB33 || 'B33',
+        14: metricNames.codeB34 || 'B34',
+        15: metricNames.codeB41 || 'B41',
+        16: metricNames.codeB42 || 'B42',
+        17: metricNames.codeB43 || 'B43',
+        18: metricNames.codeB44 || 'B44',
     };
 
     const fieldsByGroupMetrics = {
