@@ -9,7 +9,7 @@ const ClassList = ({ className, fieldsByGroup, params, handleParamChange, metric
             <h2>{className}</h2>
             {Object.keys(fieldsByGroup).map((group, i) => (
                 <div key={group} className="group-list">
-                    <h3>{groupTitles[group] || metricNamesArray[i] || `Параметр ${group}`}</h3>
+                    <h3>{groupTitles[group] || metricNamesArray[i-1] || `Параметр ${group-1}`}</h3>
                     <div className="params-grid">
                         {fieldsByGroup[group].map(([key, label]) => (
                             <NumericField
