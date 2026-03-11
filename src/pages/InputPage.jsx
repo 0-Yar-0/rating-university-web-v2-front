@@ -168,11 +168,12 @@ function firstDefinedValue(...values) {
     return '';
 }
 
-function buildExportPayload(years, paramsB) {
+function buildExportPayload(years, paramsB, inputMode = 'metrics') {
     const bData = years
         .map((year) => {
             const p = paramsB[year] || DEFAULT_B_PARAMS;
             const kYears = getKYears(p);
+            const includeDirectMetrics = inputMode === 'totals';
             const row = {
                 year,
                 ENa: normalizeNumber(p.ENa),
@@ -233,23 +234,27 @@ function buildExportPayload(years, paramsB) {
                 DIo: normalizeNumber(firstDefinedValue(p.DIo, p.DI)),
                 DIv: normalizeNumber(p.DIv),
                 DIz: normalizeNumber(p.DIz),
-                B11: normalizeNumber(p.B11),
-                B12: normalizeNumber(p.B12),
-                B13: normalizeNumber(p.B13),
-                B21: normalizeNumber(p.B21),
-                B22: normalizeNumber(p.B22),
-                B23: normalizeNumber(p.B23),
-                B24: normalizeNumber(p.B24),
-                B25: normalizeNumber(p.B25),
-                B26: normalizeNumber(p.B26),
-                B31: normalizeNumber(p.B31),
-                B32: normalizeNumber(p.B32),
-                B33Result: normalizeNumber(firstDefinedValue(p.B33Result)),
-                B34: normalizeNumber(p.B34),
-                B41: normalizeNumber(p.B41),
-                B42: normalizeNumber(p.B42),
-                B43: normalizeNumber(p.B43),
-                B44: normalizeNumber(p.B44),
+                ...(includeDirectMetrics
+                    ? {
+                        B11: normalizeNumber(p.B11),
+                        B12: normalizeNumber(p.B12),
+                        B13: normalizeNumber(p.B13),
+                        B21: normalizeNumber(p.B21),
+                        B22: normalizeNumber(p.B22),
+                        B23: normalizeNumber(p.B23),
+                        B24: normalizeNumber(p.B24),
+                        B25: normalizeNumber(p.B25),
+                        B26: normalizeNumber(p.B26),
+                        B31: normalizeNumber(p.B31),
+                        B32: normalizeNumber(p.B32),
+                        B33Result: normalizeNumber(firstDefinedValue(p.B33Result)),
+                        B34: normalizeNumber(p.B34),
+                        B41: normalizeNumber(p.B41),
+                        B42: normalizeNumber(p.B42),
+                        B43: normalizeNumber(p.B43),
+                        B44: normalizeNumber(p.B44),
+                    }
+                    : {}),
             };
 
             for (const y of yearsByKFrom(2023, kYears)) {
@@ -505,20 +510,6 @@ export default function InputPage() {
 
                 setRows(results)
                 setItems(items)
-
-                setParamsB((prev) => {
-                    if (!results?.length) return prev;
-                    const merged = { ...prev };
-                    for (const row of results) {
-                        if (!row?.year) continue;
-                        const existing = merged[row.year] || { ...DEFAULT_B_PARAMS };
-                        merged[row.year] = {
-                            ...existing,
-                            B22: firstDefinedValue(existing.B22, row.B22, row.b22),
-                        };
-                    }
-                    return merged;
-                });
             })
     }, [selectedIteration]);
 
@@ -596,7 +587,7 @@ export default function InputPage() {
     // ---------------- 4. Экспорт / импорт ----------------
     const handleExport = () => {
         try {
-            const payload = buildExportPayload(years, paramsB);
+            const payload = buildExportPayload(years, paramsB, inputMode);
 
             const blob = new Blob([JSON.stringify(payload, null, 2)], {
                 type: 'application/json;charset=utf-8',
@@ -776,7 +767,7 @@ export default function InputPage() {
         setBusy(true);
         try {
             const delay = 500;
-            const payload = buildExportPayload(years, paramsB);
+            const payload = buildExportPayload(years, paramsB, inputMode);
             const object = await Api.calcMulti(payload);
 
             const iteration = object.classes.filter(c => c.classType === "B")[0].data[0].iteration
