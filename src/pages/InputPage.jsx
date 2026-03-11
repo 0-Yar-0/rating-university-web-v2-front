@@ -348,9 +348,17 @@ export default function InputPage() {
 
         // if (_isFromStorageFilled) return;
 
-        Api.exportParams()
+        const paramsRequest = _selectedIteration
+            ? Api.getParamsBByIter(_selectedIteration)
+            : Api.exportParams();
+
+        paramsRequest
             .then(object => {
-                const classB = object.classes.filter(c => c.classType === "B")[0];
+                const classB = Array.isArray(object?.classes)
+                    ? object.classes.find(c => c.classType === "B")
+                    : object?.classType === 'B'
+                        ? object
+                        : null;
                 const data = classB?.data || [];
 
                 if (!data || !data.length) return;
@@ -464,18 +472,7 @@ export default function InputPage() {
 
                 setYears(uniqueYears);
                 setCurrentYear(uniqueYears[0]);
-                setParamsB((prev) => {
-                    const merged = { ...prev };
-                    for (const year of uniqueYears) {
-                        const incoming = map[year] || { ...DEFAULT_B_PARAMS };
-                        const existing = prev?.[year] || {};
-                        merged[year] = {
-                            ...incoming,
-                            B22: firstDefinedValue(existing.B22, incoming.B22),
-                        };
-                    }
-                    return merged;
-                });
+                setParamsB(map);
             })
             .catch(() => { })
             .finally(() => {
@@ -488,11 +485,13 @@ export default function InputPage() {
             .then(object => {
                 const items = object.classes.filter(c => c.classType === "B")[0].items
                 let results = []
+                const targetIter = _selectedIteration || selectedIteration;
 
                 if (items.length) {
-                    results = selectedIteration
-                        ? items.find(item => item.iter === _selectedIteration)?.results
+                    results = targetIter
+                        ? items.find(item => item.iter === targetIter)?.results
                         : items.reduce((maxItem, item) => item.iter > maxItem.iter ? item : maxItem).results;
+                    results = results || [];
 
                     const firstRes = results[0] || {};
                     const newNames = {};
