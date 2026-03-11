@@ -874,9 +874,24 @@ export default function InputPage() {
         ['DIz', 'Dlz'],
     ];
 
+    const b22SubParamsFields = [
+        ['NBo','NBo'],
+        ['NBv','NBv'],
+        ['NBz','NBz'],
+        ['NMo','NMo'],
+        ['NMv','NMv'],
+        ['NMz','NMz'],
+        ['ACo','ACo'],
+        ['ACv','ACv'],
+        ['ACz','ACz'],
+        ['OPC','OPC'],
+        ['ACC','ACC'],
+    ];
+
     const totalsModeGroupTitles = {
         1: 'Корректирующий коэффициент',
-        2: 'Параметры B',
+        2: 'Подпараметры B22',
+        3: 'Параметры B',
     };
 
     const metricModeGroupTitles = {
@@ -885,6 +900,7 @@ export default function InputPage() {
         3: metricNames.codeB12,
         4: metricNames.codeB13,
         5: metricNames.codeB21,
+        6: 'Подпараметры B22',
     };
 
     const fieldsByGroupMetrics = {
@@ -911,19 +927,7 @@ export default function InputPage() {
             ['beta212', 'β212'],
         ],
         // extended metric groups (generic headings)
-        6: [
-            ['NBo','NBo'],
-            ['NBv','NBv'],
-            ['NBz','NBz'],
-            ['NMo','NMo'],
-            ['NMv','NMv'],
-            ['NMz','NMz'],
-            ['ACo','ACo'],
-            ['ACv','ACv'],
-            ['ACz','ACz'],
-            ['OPC','OPC'],
-            ['ACC','ACC'],
-        ],
+        6: b22SubParamsFields,
         7: [
             ['KPo','KPo'],
             ['KPv','KPv'],
@@ -974,7 +978,9 @@ export default function InputPage() {
 
     const fieldsByGroup = inputMode === 'totals'
         ? {
-            1: totalsFields,
+            1: correctiveCoefficientFields,
+            2: b22SubParamsFields,
+            3: totalsFields,
         }
         : fieldsByGroupMetrics;
 
