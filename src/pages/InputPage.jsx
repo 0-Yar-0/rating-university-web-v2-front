@@ -11,6 +11,7 @@ const YEAR_NOW = new Date().getFullYear();
 const B25_B26_START_YEAR = 2022;
 const STORAGE_KEY = 'unirating_b_params_v2';
 const STORAGE_KEY_ITERATION = 'selected_iteration';
+const STORAGE_KEY_INPUT_MODE = 'b_input_mode';
 
 const DEFAULT_B_PARAMS = {
     ENa: '',
@@ -71,7 +72,7 @@ const DEFAULT_B_PARAMS = {
     Npr: '',
     VO: '',
     PO: '',
-    B33_o: '',
+    B33: '',
     // inputs for B34..B44
     NR2023: '',
     NR2024: '',
@@ -106,6 +107,25 @@ const DEFAULT_B_PARAMS = {
     NV2024: '',
     NZ2024: '',
     NOA2024: '',
+    DI: '',
+    // direct metric input mode (final values)
+    B11: '',
+    B12: '',
+    B13: '',
+    B21: '',
+    B22: '',
+    B23: '',
+    B24: '',
+    B25: '',
+    B26: '',
+    B31: '',
+    B32: '',
+    B33Result: '',
+    B34: '',
+    B41: '',
+    B42: '',
+    B43: '',
+    B44: '',
 };
 
 function normalizeNumber(v) {
@@ -126,6 +146,13 @@ function yearsByKFrom(startYear, k) {
 
 function yearsByK(k) {
     return yearsByKFrom(B25_B26_START_YEAR, k);
+}
+
+function rollingYearsFrom(endYear, k, minStartYear) {
+    const safeK = Math.max(1, k);
+    const safeEndYear = Number.isFinite(endYear) ? endYear : YEAR_NOW;
+    const startYear = Math.max(minStartYear, safeEndYear - safeK + 1);
+    return Array.from({ length: safeK }, (_, i) => startYear + i);
 }
 
 function firstDefinedValue(...values) {
@@ -188,13 +215,35 @@ function buildExportPayload(years, paramsB) {
                 Npr: normalizeNumber(p.Npr),
                 VO: normalizeNumber(p.VO),
                 PO: normalizeNumber(p.PO),
-                B33_o: normalizeNumber(p.B33_o),
+                B33_o: normalizeNumber(firstDefinedValue(p.B33, p.B33_o)),
+                B33: normalizeNumber(firstDefinedValue(p.B33Result)),
                 Io: normalizeNumber(p.Io),
                 Iv: normalizeNumber(p.Iv),
                 Iz: normalizeNumber(p.Iz),
                 No: normalizeNumber(p.No),
                 Nv: normalizeNumber(p.Nv),
                 Nz: normalizeNumber(p.Nz),
+                DI: normalizeNumber(p.DI),
+                DIo: normalizeNumber(firstDefinedValue(p.DIo, p.DI)),
+                DIv: normalizeNumber(p.DIv),
+                DIz: normalizeNumber(p.DIz),
+                B11: normalizeNumber(p.B11),
+                B12: normalizeNumber(p.B12),
+                B13: normalizeNumber(p.B13),
+                B21: normalizeNumber(p.B21),
+                B22: normalizeNumber(p.B22),
+                B23: normalizeNumber(p.B23),
+                B24: normalizeNumber(p.B24),
+                B25: normalizeNumber(p.B25),
+                B26: normalizeNumber(p.B26),
+                B31: normalizeNumber(p.B31),
+                B32: normalizeNumber(p.B32),
+                B33Result: normalizeNumber(firstDefinedValue(p.B33Result)),
+                B34: normalizeNumber(p.B34),
+                B41: normalizeNumber(p.B41),
+                B42: normalizeNumber(p.B42),
+                B43: normalizeNumber(p.B43),
+                B44: normalizeNumber(p.B44),
             };
 
             for (const y of yearsByKFrom(2023, kYears)) {
@@ -253,6 +302,11 @@ export default function InputPage() {
     // ---------------- For History.jsx ----------------
     const [items, setItems] = useState([]);
     const [selectedIteration, setSelectedIteration] = useState(0);
+    const [inputMode, setInputMode] = useState(() => localStorage.getItem(STORAGE_KEY_INPUT_MODE) || 'metrics');
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_INPUT_MODE, inputMode);
+    }, [inputMode]);
 
     // ---------------- 1. Загрузка на старте ----------------
     useEffect(() => {
@@ -346,13 +400,31 @@ export default function InputPage() {
                         Npr: row.Npr ?? '',
                         VO: row.VO ?? '',
                         PO: row.PO ?? '',
-                        B33_o: row.B33_o ?? '',
+                        B33: firstDefinedValue(row.B33_o, row.B33_0),
                         Io: row.Io ?? '',
                         Iv: row.Iv ?? '',
                         Iz: row.Iz ?? '',
                         No: row.No ?? '',
                         Nv: row.Nv ?? '',
                         Nz: row.Nz ?? '',
+                        DI: firstDefinedValue(row.DI, row.DIo),
+                        B11: firstDefinedValue(row.B11, row.b11),
+                        B12: firstDefinedValue(row.B12, row.b12),
+                        B13: firstDefinedValue(row.B13, row.b13),
+                        B21: firstDefinedValue(row.B21, row.b21),
+                        B22: firstDefinedValue(row.B22, row.b22),
+                        B23: firstDefinedValue(row.B23, row.b23),
+                        B24: firstDefinedValue(row.B24, row.b24),
+                        B25: firstDefinedValue(row.B25, row.b25),
+                        B26: firstDefinedValue(row.B26, row.b26),
+                        B31: firstDefinedValue(row.B31, row.b31),
+                        B32: firstDefinedValue(row.B32, row.b32),
+                        B33Result: firstDefinedValue(row.B33Result, row.B33, row.b33),
+                        B34: firstDefinedValue(row.B34, row.b34),
+                        B41: firstDefinedValue(row.B41, row.b41),
+                        B42: firstDefinedValue(row.B42, row.b42),
+                        B43: firstDefinedValue(row.B43, row.b43),
+                        B44: firstDefinedValue(row.B44, row.b44),
                     };
 
                     const dynamicYears = yearsByK(getKYears(map[row.year]));
@@ -580,10 +652,31 @@ export default function InputPage() {
                     Npr: row.Npr ?? '',
                     VO: row.VO ?? '',
                     PO: row.PO ?? '',
-                    B33_o: row.B33_o ?? '',
+                    B33: firstDefinedValue(row.B33_o, row.B33_0),
                     Io: row.Io ?? '',
                     Iv: row.Iv ?? '',
                     Iz: row.Iz ?? '',
+                    No: row.No ?? '',
+                    Nv: row.Nv ?? '',
+                    Nz: row.Nz ?? '',
+                    DI: firstDefinedValue(row.DI, row.DIo),
+                    B11: firstDefinedValue(row.B11, row.b11),
+                    B12: firstDefinedValue(row.B12, row.b12),
+                    B13: firstDefinedValue(row.B13, row.b13),
+                    B21: firstDefinedValue(row.B21, row.b21),
+                    B22: firstDefinedValue(row.B22, row.b22),
+                    B23: firstDefinedValue(row.B23, row.b23),
+                    B24: firstDefinedValue(row.B24, row.b24),
+                    B25: firstDefinedValue(row.B25, row.b25),
+                    B26: firstDefinedValue(row.B26, row.b26),
+                    B31: firstDefinedValue(row.B31, row.b31),
+                    B32: firstDefinedValue(row.B32, row.b32),
+                    B33Result: firstDefinedValue(row.B33Result, row.B33, row.b33),
+                    B34: firstDefinedValue(row.B34, row.b34),
+                    B41: firstDefinedValue(row.B41, row.b41),
+                    B42: firstDefinedValue(row.B42, row.b42),
+                    B43: firstDefinedValue(row.B43, row.b43),
+                    B44: firstDefinedValue(row.B44, row.b44),
                 };
 
                 const dynamicYears = yearsByK(getKYears(map[row.year]));
@@ -665,36 +758,76 @@ export default function InputPage() {
 
     const params = paramsB[currentYear] || DEFAULT_B_PARAMS;
 
+    const kYears = getKYears(params);
+    const canonicalYears2022 = yearsByK(kYears);
+    const canonicalYears2023 = yearsByKFrom(2023, kYears);
+    const visualYears2022 = rollingYearsFrom(currentYear, kYears, 2022);
+    const visualYears2023 = rollingYearsFrom(currentYear, kYears, 2023);
+
     const b25Fields = (() => {
         const out = [['k', 'k']];
-        for (const y of yearsByK(getKYears(params))) {
-            out.push([`CHPSi${y}`, `ЧПСi${y}`]);
-            out.push([`CHPi${y}`, `ЧПi${y}`]);
-        }
+        canonicalYears2022.forEach((canonicalYear, idx) => {
+            const visualYear = visualYears2022[idx] ?? canonicalYear;
+            out.push([`CHPSi${canonicalYear}`, `ЧПСi${visualYear}`]);
+            out.push([`CHPi${canonicalYear}`, `ЧПi${visualYear}`]);
+        });
         return out;
     })();
 
     const b26Fields = (() => {
         const out = [];
-        for (const y of yearsByK(getKYears(params))) {
-            out.push([`CHOSi${y}`, `ЧОСi${y}`]);
-            out.push([`CHOi${y}`, `ЧОi${y}`]);
-        }
+        canonicalYears2022.forEach((canonicalYear, idx) => {
+            const visualYear = visualYears2022[idx] ?? canonicalYear;
+            out.push([`CHOSi${canonicalYear}`, `ЧОСi${visualYear}`]);
+            out.push([`CHOi${canonicalYear}`, `ЧОi${visualYear}`]);
+        });
         return out;
     })();
 
-    const b34Fields = yearsByKFrom(2023, getKYears(params)).map((y) => [`NR${y}`, `NR${y}`]);
-    const b41Fields = yearsByKFrom(2022, getKYears(params)).flatMap((y) => [[`WL${y}`, `WL${y}`], [`NPR${y}`, `NPR${y}`]]);
-    const b42Fields = yearsByKFrom(2022, getKYears(params)).map((y) => [`DN${y}`, `DN${y}`]);
-    const b44Fields = yearsByKFrom(2022, getKYears(params)).flatMap((y) => [
-        [`OD${y}`, `OD${y}`],
-        [`NO${y}`, `NO_${y}`],
-        [`NV${y}`, `NV_${y}`],
-        [`NZ${y}`, `NZ_${y}`],
-        [`NOA${y}`, `NOA_${y}`],
-    ]);
+    const b34Fields = canonicalYears2023.map((canonicalYear, idx) => {
+        const visualYear = visualYears2023[idx] ?? canonicalYear;
+        return [`NR${canonicalYear}`, `NR${visualYear}`];
+    });
+    const b41Fields = canonicalYears2022.flatMap((canonicalYear, idx) => {
+        const visualYear = visualYears2022[idx] ?? canonicalYear;
+        return [[`WL${canonicalYear}`, `WL${visualYear}`], [`NPR${canonicalYear}`, `NPR${visualYear}`]];
+    });
+    const b42Fields = canonicalYears2022.map((canonicalYear, idx) => {
+        const visualYear = visualYears2022[idx] ?? canonicalYear;
+        return [`DN${canonicalYear}`, `DN${visualYear}`];
+    });
+    const b44Fields = canonicalYears2022.flatMap((canonicalYear, idx) => {
+        const visualYear = visualYears2022[idx] ?? canonicalYear;
+        return [
+        [`OD${canonicalYear}`, `OD${visualYear}`],
+        [`NO${canonicalYear}`, `NO_${visualYear}`],
+        [`NV${canonicalYear}`, `NV_${visualYear}`],
+        [`NZ${canonicalYear}`, `NZ_${visualYear}`],
+        [`NOA${canonicalYear}`, `NOA_${visualYear}`],
+        ];
+    });
 
-    const fieldsByGroup = {
+    const totalsFields = [
+        ['B11', 'B11'],
+        ['B12', 'B12'],
+        ['B13', 'B13'],
+        ['B21', 'B21'],
+        ['B22', 'B22'],
+        ['B23', 'B23'],
+        ['B24', 'B24'],
+        ['B25', 'B25'],
+        ['B26', 'B26'],
+        ['B31', 'B31'],
+        ['B32', 'B32'],
+        ['B33Result', 'B33'],
+        ['B34', 'B34'],
+        ['B41', 'B41'],
+        ['B42', 'B42'],
+        ['B43', 'B43'],
+        ['B44', 'B44'],
+    ];
+
+    const fieldsByGroupMetrics = {
         1: [
             ['ENa', 'ENa'],
             ['ENb', 'ENb'],
@@ -760,12 +893,13 @@ export default function InputPage() {
             ['VO','VO'],
             ['PO','PO'],
         ],
-        12: [['B33_o','B33_o']],
+        12: [['B33','B33']],
         // new input groups for formulas B34..B44
         13: b34Fields,
         14: b41Fields,
         15: b42Fields,
         16: [
+            ['DI','DI'],
             ['Io','Io'],
             ['Iv','Iv'],
             ['Iz','Iz'],
@@ -776,11 +910,15 @@ export default function InputPage() {
         17: b44Fields,
     };
 
+    const fieldsByGroup = inputMode === 'totals'
+        ? { 1: totalsFields }
+        : fieldsByGroupMetrics;
+
     return (
         <>
             <Analytics
                 rows={rows}
-                metricNames={Object.keys(metricNames)}
+                metricNames={metricNames}
                 setMetricNames={setMetricNames}
             />
             <div className="card big-card">
@@ -813,6 +951,19 @@ export default function InputPage() {
                             />
                         </div>
                     </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <span>Режим ввода:</span>
+                    <select
+                        className="num-input"
+                        value={inputMode}
+                        onChange={(e) => setInputMode(e.target.value)}
+                        style={{ maxWidth: 360 }}
+                    >
+                        <option value="metrics">Через метрики</option>
+                        <option value="totals">Через итоговые значения параметров</option>
+                    </select>
                 </div>
 
                 <div className="input-grid">
