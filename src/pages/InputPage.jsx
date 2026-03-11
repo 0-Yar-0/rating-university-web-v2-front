@@ -846,7 +846,6 @@ export default function InputPage() {
     });
 
     const totalsFields = [
-        ['correctiveCoefficientField', 'Корректирующий коэффициент'],
         ['B11', 'B11'],
         ['B12', 'B12'],
         ['B13', 'B13'],
