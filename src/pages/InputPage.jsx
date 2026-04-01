@@ -726,6 +726,7 @@ export default function InputPage() {
         codeB13: 'B13',
         codeB21: 'B21',
     });
+    const [calcSummary, setCalcSummary] = useState([]);
 
     // ---------------- For History.jsx ----------------
     const [items, setItems] = useState([]);
@@ -1621,6 +1622,27 @@ export default function InputPage() {
             const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
             const object = await Api.calcMulti(payload);
 
+            const summary = Array.isArray(object?.classes)
+                ? object.classes.flatMap((block) => {
+                    const firstRow = Array.isArray(block?.data) ? block.data[0] : null;
+                    if (!firstRow) {
+                        return [];
+                    }
+                    const total = firstRow.M_TOTAL_WITH_KI
+                        ?? firstRow.A_TOTAL_WITH_KI
+                        ?? firstRow.B_TOTAL_WITH_KI
+                        ?? firstRow.sumB
+                        ?? firstRow.TOTAL
+                        ?? firstRow.A_TOTAL
+                        ?? firstRow.B_TOTAL
+                        ?? firstRow.M_TOTAL
+                        ?? null;
+                    const ki = firstRow.KI ?? firstRow.KI_A ?? firstRow.KI_B ?? firstRow.KI_M ?? null;
+                    return [{ classType: block.classType, year: firstRow.year, total, ki }];
+                })
+                : [];
+            setCalcSummary(summary);
+
             const iteration = object.classes.filter(c => c.classType === "B")[0].data[0].iteration
             setSelectedIteration(iteration);
             localStorage.setItem(STORAGE_KEY_ITERATION, String(iteration)),
@@ -2027,6 +2049,20 @@ export default function InputPage() {
                         <option value="totals">Через итоговые значения параметров</option>
                     </select>
                 </div>
+
+                {calcSummary.length > 0 && (
+                    <div className="card" style={{ marginBottom: 16, padding: 12 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+                            <strong>Результат последнего расчёта:</strong>
+                            {calcSummary.map((item) => (
+                                <span key={`${item.classType}-${item.year}`} className="history-chip">
+                                    {item.classType} {item.year}: {item.total != null ? Number(item.total).toFixed(3) : 'n/a'}
+                                    {item.ki != null ? `, KI=${Number(item.ki).toFixed(3)}` : ''}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="input-grid">
                     <ClassList
