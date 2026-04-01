@@ -202,6 +202,16 @@ const DEFAULT_A_PARAMS = {
 
 const DEFAULT_M_PARAMS = {
     k: '3',
+    ZMD: '',
+    ZM: '',
+    CHZ: '',
+    ZPK: '',
+    MDP: '',
+    PRF: '',
+    KCO: '',
+    M21_o: '',
+    M22_o: '',
+    M23_o: '',
     M31_o: '',
     N: '',
     Npr: '',
@@ -261,17 +271,18 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
     const aData = years
         .map((year) => {
             const p = paramsA[year] || DEFAULT_A_PARAMS;
+            const pb = paramsB[year] || DEFAULT_B_PARAMS;
             const kYears = getKYears(p);
             const includeDirectMetrics = inputMode === 'totals';
 
             return {
                 year,
-                PNo: normalizeNumber(p.PNo),
-                PNv: normalizeNumber(p.PNv),
-                PNz: normalizeNumber(p.PNz),
-                DIo: normalizeNumber(p.DIo),
-                DIv: normalizeNumber(p.DIv),
-                DIz: normalizeNumber(p.DIz),
+                PNo: normalizeNumber(firstDefinedValue(p.PNo, pb.PNo)),
+                PNv: normalizeNumber(firstDefinedValue(p.PNv, pb.PNv)),
+                PNz: normalizeNumber(firstDefinedValue(p.PNz, pb.PNz)),
+                DIo: normalizeNumber(firstDefinedValue(p.DIo, pb.DIo, pb.DI)),
+                DIv: normalizeNumber(firstDefinedValue(p.DIv, pb.DIv)),
+                DIz: normalizeNumber(firstDefinedValue(p.DIz, pb.DIz)),
                 PRF: normalizeNumber(p.PRF),
                 KCO: normalizeNumber(p.KCO),
                 ZKN: normalizeNumber(p.ZKN),
@@ -282,15 +293,15 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 A23RF: normalizeNumber(p.A23RF),
                 sumPoints: normalizeNumber(p.sumPoints),
                 k: kYears,
-                WL2022: normalizeNumber(p.WL2022),
-                WL2023: normalizeNumber(p.WL2023),
-                WL2024: normalizeNumber(p.WL2024),
-                NPR2022: normalizeNumber(p.NPR2022),
-                NPR2023: normalizeNumber(p.NPR2023),
-                NPR2024: normalizeNumber(p.NPR2024),
-                DN2022: normalizeNumber(p.DN2022),
-                DN2023: normalizeNumber(p.DN2023),
-                DN2024: normalizeNumber(p.DN2024),
+                WL2022: normalizeNumber(firstDefinedValue(p.WL2022, pb.WL2022)),
+                WL2023: normalizeNumber(firstDefinedValue(p.WL2023, pb.WL2023)),
+                WL2024: normalizeNumber(firstDefinedValue(p.WL2024, pb.WL2024)),
+                NPR2022: normalizeNumber(firstDefinedValue(p.NPR2022, pb.NPR2022)),
+                NPR2023: normalizeNumber(firstDefinedValue(p.NPR2023, pb.NPR2023)),
+                NPR2024: normalizeNumber(firstDefinedValue(p.NPR2024, pb.NPR2024)),
+                DN2022: normalizeNumber(firstDefinedValue(p.DN2022, pb.DN2022)),
+                DN2023: normalizeNumber(firstDefinedValue(p.DN2023, pb.DN2023)),
+                DN2024: normalizeNumber(firstDefinedValue(p.DN2024, pb.DN2024)),
                 RDN2022: normalizeNumber(p.RDN2022),
                 RDN2023: normalizeNumber(p.RDN2023),
                 RDN2024: normalizeNumber(p.RDN2024),
@@ -300,9 +311,9 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 ASP2022: normalizeNumber(p.ASP2022),
                 ASP2023: normalizeNumber(p.ASP2023),
                 ASP2024: normalizeNumber(p.ASP2024),
-                OD2022: normalizeNumber(p.OD2022),
-                OD2023: normalizeNumber(p.OD2023),
-                OD2024: normalizeNumber(p.OD2024),
+                OD2022: normalizeNumber(firstDefinedValue(p.OD2022, pb.OD2022)),
+                OD2023: normalizeNumber(firstDefinedValue(p.OD2023, pb.OD2023)),
+                OD2024: normalizeNumber(firstDefinedValue(p.OD2024, pb.OD2024)),
                 PFN: normalizeNumber(p.PFN),
                 ASO: normalizeNumber(p.ASO),
                 DS: normalizeNumber(p.DS),
@@ -446,20 +457,31 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
     const mData = years
         .map((year) => {
             const p = paramsM[year] || DEFAULT_M_PARAMS;
+            const pb = paramsB[year] || DEFAULT_B_PARAMS;
             const kYears = getKYears(p);
             const includeDirectMetrics = inputMode === 'totals';
 
             return {
                 year,
                 k: kYears,
+                ZMD: normalizeNumber(p.ZMD),
+                ZM: normalizeNumber(p.ZM),
+                CHZ: normalizeNumber(p.CHZ),
+                ZPK: normalizeNumber(p.ZPK),
+                MDP: normalizeNumber(p.MDP),
+                PRF: normalizeNumber(p.PRF),
+                KCO: normalizeNumber(p.KCO),
+                M21_o: normalizeNumber(p.M21_o),
+                M22_o: normalizeNumber(p.M22_o),
+                M23_o: normalizeNumber(p.M23_o),
                 M31_o: normalizeNumber(p.M31_o),
-                N: normalizeNumber(p.N),
-                Npr: normalizeNumber(p.Npr),
-                VO: normalizeNumber(p.VO),
-                PO: normalizeNumber(p.PO),
-                NR2023: normalizeNumber(p.NR2023),
-                NR2024: normalizeNumber(p.NR2024),
-                NR2025: normalizeNumber(p.NR2025),
+                N: normalizeNumber(firstDefinedValue(p.N, pb.N)),
+                Npr: normalizeNumber(firstDefinedValue(p.Npr, pb.Npr)),
+                VO: normalizeNumber(firstDefinedValue(p.VO, pb.VO)),
+                PO: normalizeNumber(firstDefinedValue(p.PO, pb.PO)),
+                NR2023: normalizeNumber(firstDefinedValue(p.NR2023, pb.NR2023)),
+                NR2024: normalizeNumber(firstDefinedValue(p.NR2024, pb.NR2024)),
+                NR2025: normalizeNumber(firstDefinedValue(p.NR2025, pb.NR2025)),
                 ...(includeDirectMetrics
                     ? {
                         KI_M: normalizeNumber(firstDefinedValue(p.KI_M, p.M_KI, p.KI)),
@@ -755,6 +777,16 @@ export default function InputPage() {
                     ys.push(row.year);
                     mapM[row.year] = {
                         k: firstDefinedValue(row.k, row.K, 3),
+                        ZMD: row.ZMD ?? '',
+                        ZM: row.ZM ?? '',
+                        CHZ: row.CHZ ?? '',
+                        ZPK: row.ZPK ?? '',
+                        MDP: row.MDP ?? '',
+                        PRF: firstDefinedValue(row.PRF, row.M14_PRF),
+                        KCO: firstDefinedValue(row.KCO, row.KTSO, row.M14_KCO),
+                        M21_o: firstDefinedValue(row.M21_o, row.M21_raw),
+                        M22_o: firstDefinedValue(row.M22_o, row.M22_raw),
+                        M23_o: firstDefinedValue(row.M23_o, row.M23_raw),
                         M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
                         N: row.N ?? '',
                         Npr: row.Npr ?? '',
@@ -1156,6 +1188,16 @@ export default function InputPage() {
                     ys.push(row.year);
                     mapM[row.year] = {
                         k: firstDefinedValue(row.k, row.K, 3),
+                        ZMD: row.ZMD ?? '',
+                        ZM: row.ZM ?? '',
+                        CHZ: row.CHZ ?? '',
+                        ZPK: row.ZPK ?? '',
+                        MDP: row.MDP ?? '',
+                        PRF: firstDefinedValue(row.PRF, row.M14_PRF),
+                        KCO: firstDefinedValue(row.KCO, row.KTSO, row.M14_KCO),
+                        M21_o: firstDefinedValue(row.M21_o, row.M21_raw),
+                        M22_o: firstDefinedValue(row.M22_o, row.M22_raw),
+                        M23_o: firstDefinedValue(row.M23_o, row.M23_raw),
                         M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
                         N: row.N ?? '',
                         Npr: row.Npr ?? '',
@@ -1533,9 +1575,16 @@ export default function InputPage() {
     };
 
     const mGroupTitles = {
-        1: 'M31 Доходы выпускников / ПМ',
-        2: 'M32 Сохранность контингента',
-        3: 'M33 Востребованность на рынке труда',
+        1: 'M11 Целевой прием магистратуры',
+        2: 'M12 Число заявлений на место',
+        3: 'M13 Доля договорного приема',
+        4: 'M14 Исполнение КЦП',
+        5: 'M21 Индикатор качества',
+        6: 'M22 Научная активность',
+        7: 'M23 Проектная активность',
+        8: 'M31 Доходы выпускников / ПМ',
+        9: 'M32 Сохранность контингента',
+        10: 'M33 Востребованность на рынке труда',
     };
 
     const mFieldsByGroupTotals = {
@@ -1544,9 +1593,16 @@ export default function InputPage() {
     };
 
     const mFieldsByGroup = {
-        1: [['M31_o', 'M31_o']],
-        2: [['N', 'N'], ['Npr', 'Npr'], ['VO', 'VO'], ['PO', 'PO']],
-        3: [['NR2023', 'NR2023'], ['NR2024', 'NR2024'], ['NR2025', 'NR2025']],
+        1: [['ZMD', 'ZMD'], ['ZM', 'ZM']],
+        2: [['CHZ', 'CHZ'], ['ZPK', 'ZPK']],
+        3: [['MDP', 'MDP'], ['ZPK', 'ZPK']],
+        4: [['PRF', 'PRF'], ['KCO', 'KCO']],
+        5: [['M21_o', 'M21_o']],
+        6: [['M22_o', 'M22_o']],
+        7: [['M23_o', 'M23_o']],
+        8: [['M31_o', 'M31_o']],
+        9: [['N', 'N'], ['Npr', 'Npr'], ['VO', 'VO'], ['PO', 'PO']],
+        10: [['NR2023', 'NR2023'], ['NR2024', 'NR2024'], ['NR2025', 'NR2025']],
     };
 
     return (
