@@ -209,9 +209,26 @@ const DEFAULT_M_PARAMS = {
     MDP: '',
     PRF: '',
     KCO: '',
-    M21_o: '',
-    M22_o: '',
-    M23_o: '',
+    M21_poa: '',
+    M21_licensed: '',
+    M22_NMo: '',
+    M22_NMv: '',
+    M22_NMz: '',
+    M22_ACo: '',
+    M22_ACv: '',
+    M22_ACz: '',
+    M22_OPC: '',
+    M22_ACC: '',
+    M23_No: '',
+    M23_Nv: '',
+    M23_Nz: '',
+    M23_KPo: '',
+    M23_KPv: '',
+    M23_KPz: '',
+    M23_PPPo: '',
+    M23_PPPv: '',
+    M23_PPPz: '',
+    M23_NOA: '',
     M31_o: '',
     N: '',
     Npr: '',
@@ -237,6 +254,13 @@ function normalizeNumber(v) {
     if (v === '' || v == null) return null;
     const n = Number(String(v).replace(',', '.'));
     return Number.isNaN(n) ? null : n;
+}
+
+function safeDivOrZero(numerator, denominator) {
+    const n = Number(numerator);
+    const d = Number(denominator);
+    if (!Number.isFinite(n) || !Number.isFinite(d) || d === 0) return 0;
+    return n / d;
 }
 
 function getKYears(params) {
@@ -461,6 +485,27 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
             const kYears = getKYears(p);
             const includeDirectMetrics = inputMode === 'totals';
 
+            const m21Poa = normalizeNumber(firstDefinedValue(p.M21_poa, p.M21_o));
+            const m21Licensed = normalizeNumber(firstDefinedValue(p.M21_licensed));
+            const nmp = (normalizeNumber(firstDefinedValue(p.M22_NMo)) ?? 0)
+                + 0.25 * (normalizeNumber(firstDefinedValue(p.M22_NMv)) ?? 0)
+                + 0.1 * (normalizeNumber(firstDefinedValue(p.M22_NMz)) ?? 0);
+            const acp = (normalizeNumber(firstDefinedValue(p.M22_ACo)) ?? 0)
+                + 0.25 * (normalizeNumber(firstDefinedValue(p.M22_ACv)) ?? 0)
+                + 0.1 * (normalizeNumber(firstDefinedValue(p.M22_ACz)) ?? 0);
+            const m22O = safeDivOrZero(acp + (normalizeNumber(firstDefinedValue(p.M22_OPC)) ?? 0) + (normalizeNumber(firstDefinedValue(p.M22_ACC)) ?? 0), nmp);
+            const np = (normalizeNumber(firstDefinedValue(p.M23_No, pb.No)) ?? 0)
+                + 0.25 * (normalizeNumber(firstDefinedValue(p.M23_Nv, pb.Nv)) ?? 0)
+                + 0.1 * (normalizeNumber(firstDefinedValue(p.M23_Nz, pb.Nz)) ?? 0);
+            const pkp = (normalizeNumber(firstDefinedValue(p.M23_KPo, pb.KPo)) ?? 0)
+                + 0.25 * (normalizeNumber(firstDefinedValue(p.M23_KPv, pb.KPv)) ?? 0)
+                + 0.1 * (normalizeNumber(firstDefinedValue(p.M23_KPz, pb.KPz)) ?? 0);
+            const ppp = (normalizeNumber(firstDefinedValue(p.M23_PPPo, pb.PPPo)) ?? 0)
+                + 0.25 * (normalizeNumber(firstDefinedValue(p.M23_PPPv, pb.PPPv)) ?? 0)
+                + 0.1 * (normalizeNumber(firstDefinedValue(p.M23_PPPz, pb.PPPz)) ?? 0);
+            const noa = normalizeNumber(firstDefinedValue(p.M23_NOA, pb.NOA)) ?? 0;
+            const m23O = safeDivOrZero(0.25 * pkp + ppp, np + noa);
+
             return {
                 year,
                 k: kYears,
@@ -471,9 +516,29 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 MDP: normalizeNumber(p.MDP),
                 PRF: normalizeNumber(p.PRF),
                 KCO: normalizeNumber(p.KCO),
-                M21_o: normalizeNumber(p.M21_o),
-                M22_o: normalizeNumber(p.M22_o),
-                M23_o: normalizeNumber(p.M23_o),
+                M21_poa: m21Poa,
+                M21_licensed: m21Licensed,
+                M22_NMo: normalizeNumber(p.M22_NMo),
+                M22_NMv: normalizeNumber(p.M22_NMv),
+                M22_NMz: normalizeNumber(p.M22_NMz),
+                M22_ACo: normalizeNumber(p.M22_ACo),
+                M22_ACv: normalizeNumber(p.M22_ACv),
+                M22_ACz: normalizeNumber(p.M22_ACz),
+                M22_OPC: normalizeNumber(p.M22_OPC),
+                M22_ACC: normalizeNumber(p.M22_ACC),
+                M23_No: normalizeNumber(p.M23_No),
+                M23_Nv: normalizeNumber(p.M23_Nv),
+                M23_Nz: normalizeNumber(p.M23_Nz),
+                M23_KPo: normalizeNumber(p.M23_KPo),
+                M23_KPv: normalizeNumber(p.M23_KPv),
+                M23_KPz: normalizeNumber(p.M23_KPz),
+                M23_PPPo: normalizeNumber(p.M23_PPPo),
+                M23_PPPv: normalizeNumber(p.M23_PPPv),
+                M23_PPPz: normalizeNumber(p.M23_PPPz),
+                M23_NOA: normalizeNumber(p.M23_NOA),
+                M21_o: normalizeNumber(safeDivOrZero(m21Poa, m21Licensed)),
+                M22_o: normalizeNumber(m22O),
+                M23_o: normalizeNumber(m23O),
                 M31_o: normalizeNumber(p.M31_o),
                 N: normalizeNumber(firstDefinedValue(p.N, pb.N)),
                 Npr: normalizeNumber(firstDefinedValue(p.Npr, pb.Npr)),
@@ -485,10 +550,6 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 ...(includeDirectMetrics
                     ? {
                         KI_M: normalizeNumber(firstDefinedValue(p.KI_M, p.M_KI, p.KI)),
-                        M11: normalizeNumber(p.M11),
-                        M12: normalizeNumber(p.M12),
-                        M13: normalizeNumber(p.M13),
-                        M14: normalizeNumber(p.M14),
                         M21: normalizeNumber(p.M21),
                         M22: normalizeNumber(p.M22),
                         M23: normalizeNumber(p.M23),
@@ -567,9 +628,6 @@ export default function InputPage() {
         //             saved.years.length > 0 &&
         //             typeof saved.currentYear === 'number' &&
         //             typeof saved.paramsB === 'object'
-        //         ) {
-        //             setYears(saved.years);
-        //             setCurrentYear(saved.currentYear);
         //             setParamsB(saved.paramsB);
 
         //             setIsFromStorageFilled(true);
@@ -784,21 +842,6 @@ export default function InputPage() {
                         MDP: row.MDP ?? '',
                         PRF: firstDefinedValue(row.PRF, row.M14_PRF),
                         KCO: firstDefinedValue(row.KCO, row.KTSO, row.M14_KCO),
-                        M21_o: firstDefinedValue(row.M21_o, row.M21_raw),
-                        M22_o: firstDefinedValue(row.M22_o, row.M22_raw),
-                        M23_o: firstDefinedValue(row.M23_o, row.M23_raw),
-                        M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
-                        N: row.N ?? '',
-                        Npr: row.Npr ?? '',
-                        VO: row.VO ?? '',
-                        PO: row.PO ?? '',
-                        NR2023: row.NR2023 ?? '',
-                        NR2024: row.NR2024 ?? '',
-                        NR2025: row.NR2025 ?? '',
-                        KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI),
-                        M11: firstDefinedValue(row.M11, row.m11),
-                        M12: firstDefinedValue(row.M12, row.m12),
-                        M13: firstDefinedValue(row.M13, row.m13),
                         M14: firstDefinedValue(row.M14, row.m14),
                         M21: firstDefinedValue(row.M21, row.m21),
                         M22: firstDefinedValue(row.M22, row.m22),
@@ -1195,7 +1238,26 @@ export default function InputPage() {
                         MDP: row.MDP ?? '',
                         PRF: firstDefinedValue(row.PRF, row.M14_PRF),
                         KCO: firstDefinedValue(row.KCO, row.KTSO, row.M14_KCO),
-                        M21_o: firstDefinedValue(row.M21_o, row.M21_raw),
+                        M21_poa: firstDefinedValue(row.M21_poa, row.M21_o, row.M21_raw),
+                        M21_licensed: firstDefinedValue(row.M21_licensed),
+                        M22_NMo: firstDefinedValue(row.M22_NMo),
+                        M22_NMv: firstDefinedValue(row.M22_NMv),
+                        M22_NMz: firstDefinedValue(row.M22_NMz),
+                        M22_ACo: firstDefinedValue(row.M22_ACo),
+                        M22_ACv: firstDefinedValue(row.M22_ACv),
+                        M22_ACz: firstDefinedValue(row.M22_ACz),
+                        M22_OPC: firstDefinedValue(row.M22_OPC),
+                        M22_ACC: firstDefinedValue(row.M22_ACC),
+                        M23_No: firstDefinedValue(row.M23_No),
+                        M23_Nv: firstDefinedValue(row.M23_Nv),
+                        M23_Nz: firstDefinedValue(row.M23_Nz),
+                        M23_KPo: firstDefinedValue(row.M23_KPo),
+                        M23_KPv: firstDefinedValue(row.M23_KPv),
+                        M23_KPz: firstDefinedValue(row.M23_KPz),
+                        M23_PPPo: firstDefinedValue(row.M23_PPPo),
+                        M23_PPPv: firstDefinedValue(row.M23_PPPv),
+                        M23_PPPz: firstDefinedValue(row.M23_PPPz),
+                        M23_NOA: firstDefinedValue(row.M23_NOA),
                         M22_o: firstDefinedValue(row.M22_o, row.M22_raw),
                         M23_o: firstDefinedValue(row.M23_o, row.M23_raw),
                         M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
@@ -1579,9 +1641,9 @@ export default function InputPage() {
         2: 'M12 Число заявлений на место',
         3: 'M13 Доля договорного приема',
         4: 'M14 Исполнение КЦП',
-        5: 'M21 Индикатор качества',
-        6: 'M22 Научная активность',
-        7: 'M23 Проектная активность',
+        5: 'M21 Наличие ПОА',
+        6: 'M22 Соотношение (Асп+Орд+Асс)/Маг',
+        7: 'M23 Соотношение ДПО/(БС+Маг+Орд+Асс)',
         8: 'M31 Доходы выпускников / ПМ',
         9: 'M32 Сохранность контингента',
         10: 'M33 Востребованность на рынке труда',
@@ -1597,9 +1659,9 @@ export default function InputPage() {
         2: [['CHZ', 'CHZ'], ['ZPK', 'ZPK']],
         3: [['MDP', 'MDP'], ['ZPK', 'ZPK']],
         4: [['PRF', 'PRF'], ['KCO', 'KCO']],
-        5: [['M21_o', 'M21_o']],
-        6: [['M22_o', 'M22_o']],
-        7: [['M23_o', 'M23_o']],
+        5: [['M21_poa', 'НПС с ПОА'], ['M21_licensed', 'Лицензированные НПС']],
+        6: [['M22_NMo', 'NMo'], ['M22_NMv', 'NMv'], ['M22_NMz', 'NMz'], ['M22_ACo', 'ACo'], ['M22_ACv', 'ACv'], ['M22_ACz', 'ACz'], ['M22_OPC', 'OPC'], ['M22_ACC', 'ACC']],
+        7: [['M23_No', 'No'], ['M23_Nv', 'Nv'], ['M23_Nz', 'Nz'], ['M23_KPo', 'KPo'], ['M23_KPv', 'KPv'], ['M23_KPz', 'KPz'], ['M23_PPPo', 'PPPo'], ['M23_PPPv', 'PPPv'], ['M23_PPPz', 'PPPz'], ['M23_NOA', 'NOA']],
         8: [['M31_o', 'M31_o']],
         9: [['N', 'N'], ['Npr', 'Npr'], ['VO', 'VO'], ['PO', 'PO']],
         10: [['NR2023', 'NR2023'], ['NR2024', 'NR2024'], ['NR2025', 'NR2025']],
