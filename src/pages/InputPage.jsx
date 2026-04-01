@@ -134,6 +134,41 @@ const DEFAULT_B_PARAMS = {
     B44: '',
 };
 
+const DEFAULT_A_PARAMS = {
+    PNo: '',
+    PNv: '',
+    PNz: '',
+    DIo: '',
+    DIv: '',
+    DIz: '',
+    sumPoints: '',
+    k: '3',
+    WL2022: '',
+    WL2023: '',
+    WL2024: '',
+    NPR2022: '',
+    NPR2023: '',
+    NPR2024: '',
+    DN2022: '',
+    DN2023: '',
+    DN2024: '',
+    RDN2022: '',
+    RDN2023: '',
+    RDN2024: '',
+};
+
+const DEFAULT_M_PARAMS = {
+    k: '3',
+    M31_o: '',
+    N: '',
+    Npr: '',
+    VO: '',
+    PO: '',
+    NR2023: '',
+    NR2024: '',
+    NR2025: '',
+};
+
 function normalizeNumber(v) {
     if (v === '' || v == null) return null;
     const n = Number(String(v).replace(',', '.'));
@@ -168,7 +203,38 @@ function firstDefinedValue(...values) {
     return '';
 }
 
-function buildExportPayload(years, paramsB, inputMode = 'metrics') {
+function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metrics') {
+    const aData = years
+        .map((year) => {
+            const p = paramsA[year] || DEFAULT_A_PARAMS;
+            const kYears = getKYears(p);
+
+            return {
+                year,
+                PNo: normalizeNumber(p.PNo),
+                PNv: normalizeNumber(p.PNv),
+                PNz: normalizeNumber(p.PNz),
+                DIo: normalizeNumber(p.DIo),
+                DIv: normalizeNumber(p.DIv),
+                DIz: normalizeNumber(p.DIz),
+                sumPoints: normalizeNumber(p.sumPoints),
+                k: kYears,
+                WL2022: normalizeNumber(p.WL2022),
+                WL2023: normalizeNumber(p.WL2023),
+                WL2024: normalizeNumber(p.WL2024),
+                NPR2022: normalizeNumber(p.NPR2022),
+                NPR2023: normalizeNumber(p.NPR2023),
+                NPR2024: normalizeNumber(p.NPR2024),
+                DN2022: normalizeNumber(p.DN2022),
+                DN2023: normalizeNumber(p.DN2023),
+                DN2024: normalizeNumber(p.DN2024),
+                RDN2022: normalizeNumber(p.RDN2022),
+                RDN2023: normalizeNumber(p.RDN2023),
+                RDN2024: normalizeNumber(p.RDN2024),
+            };
+        })
+        .filter((row) => row.year);
+
     const bData = years
         .map((year) => {
             const p = paramsB[year] || DEFAULT_B_PARAMS;
@@ -285,11 +351,39 @@ function buildExportPayload(years, paramsB, inputMode = 'metrics') {
         })
         .filter((row) => row.year);
 
+    const mData = years
+        .map((year) => {
+            const p = paramsM[year] || DEFAULT_M_PARAMS;
+            const kYears = getKYears(p);
+
+            return {
+                year,
+                k: kYears,
+                M31_o: normalizeNumber(p.M31_o),
+                N: normalizeNumber(p.N),
+                Npr: normalizeNumber(p.Npr),
+                VO: normalizeNumber(p.VO),
+                PO: normalizeNumber(p.PO),
+                NR2023: normalizeNumber(p.NR2023),
+                NR2024: normalizeNumber(p.NR2024),
+                NR2025: normalizeNumber(p.NR2025),
+            };
+        })
+        .filter((row) => row.year);
+
     return {
         classes: [
             {
+                classType: 'A',
+                data: aData,
+            },
+            {
                 classType: 'B',
                 data: bData,
+            },
+            {
+                classType: 'M',
+                data: mData,
             },
         ],
     };
@@ -298,7 +392,9 @@ function buildExportPayload(years, paramsB, inputMode = 'metrics') {
 export default function InputPage() {
     const [currentYear, setCurrentYear] = useState(YEAR_NOW);
     const [years, setYears] = useState([YEAR_NOW]);
+    const [paramsA, setParamsA] = useState({ [YEAR_NOW]: { ...DEFAULT_A_PARAMS } });
     const [paramsB, setParamsB] = useState({ [YEAR_NOW]: { ...DEFAULT_B_PARAMS } });
+    const [paramsM, setParamsM] = useState({ [YEAR_NOW]: { ...DEFAULT_M_PARAMS } });
     const [busy, setBusy] = useState(false);
     // To avoid autosave on first page load
     const [isFromStorageFilled, setIsFromStorageFilled] = useState(false);
@@ -362,16 +458,54 @@ export default function InputPage() {
 
         paramsRequest
             .then(object => {
+                const classA = Array.isArray(object?.classes)
+                    ? object.classes.find(c => c.classType === 'A')
+                    : null;
                 const classB = Array.isArray(object?.classes)
                     ? object.classes.find(c => c.classType === "B")
                     : object?.classType === 'B'
                         ? object
                         : null;
-                const data = classB?.data || [];
+                const classM = Array.isArray(object?.classes)
+                    ? object.classes.find(c => c.classType === 'M')
+                    : null;
 
-                if (!data || !data.length) return;
+                const dataA = classA?.data || [];
+                const data = classB?.data || [];
+                const dataM = classM?.data || [];
+
+                if ((!dataA || !dataA.length) && (!data || !data.length) && (!dataM || !dataM.length)) return;
+                const mapA = {};
                 const map = {};
+                const mapM = {};
                 const ys = [];
+
+                for (const row of dataA) {
+                    ys.push(row.year);
+                    mapA[row.year] = {
+                        PNo: row.PNo ?? '',
+                        PNv: row.PNv ?? '',
+                        PNz: row.PNz ?? '',
+                        DIo: row.DIo ?? '',
+                        DIv: row.DIv ?? '',
+                        DIz: row.DIz ?? '',
+                        sumPoints: row.sumPoints ?? '',
+                        k: firstDefinedValue(row.k, row.K, 3),
+                        WL2022: row.WL2022 ?? '',
+                        WL2023: row.WL2023 ?? '',
+                        WL2024: row.WL2024 ?? '',
+                        NPR2022: row.NPR2022 ?? '',
+                        NPR2023: row.NPR2023 ?? '',
+                        NPR2024: row.NPR2024 ?? '',
+                        DN2022: row.DN2022 ?? '',
+                        DN2023: row.DN2023 ?? '',
+                        DN2024: row.DN2024 ?? '',
+                        RDN2022: row.RDN2022 ?? '',
+                        RDN2023: row.RDN2023 ?? '',
+                        RDN2024: row.RDN2024 ?? '',
+                    };
+                }
+
                 for (const row of data) {
                     ys.push(row.year);
 
@@ -476,15 +610,32 @@ export default function InputPage() {
                     }
                 }
 
+                for (const row of dataM) {
+                    ys.push(row.year);
+                    mapM[row.year] = {
+                        k: firstDefinedValue(row.k, row.K, 3),
+                        M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
+                        N: row.N ?? '',
+                        Npr: row.Npr ?? '',
+                        VO: row.VO ?? '',
+                        PO: row.PO ?? '',
+                        NR2023: row.NR2023 ?? '',
+                        NR2024: row.NR2024 ?? '',
+                        NR2025: row.NR2025 ?? '',
+                    };
+                }
+
                 const uniqueYears = [...new Set(ys)].sort((a, b) => b - a);
 
                 setYears(uniqueYears);
                 setCurrentYear(uniqueYears[0]);
+                setParamsA(mapA);
                 setParamsB(map);
+                setParamsM(mapM);
             })
             .catch(() => { })
             .finally(() => {
-                const payload = { years, currentYear, paramsB };
+                const payload = { years, currentYear, paramsA, paramsB, paramsM };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
             })
 
@@ -520,19 +671,27 @@ export default function InputPage() {
     useEffect(() => {
         if (!isFromStorageFilled) return;
 
-        const payload = { years, currentYear, paramsB };
+        const payload = { years, currentYear, paramsA, paramsB, paramsM };
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
         } catch (e) {
             console.warn('Ошибка сохранения в localStorage', e);
         }
-    }, [years, currentYear, paramsB]);
+    }, [years, currentYear, paramsA, paramsB, paramsM]);
 
     const ensureYear = (year) => {
         setYears((ys) => (ys.includes(year) ? ys : [...ys, year].sort((a, b) => a - b)));
+        setParamsA((state) => ({
+            ...state,
+            [year]: state[year] || { ...DEFAULT_A_PARAMS },
+        }));
         setParamsB((state) => ({
             ...state,
             [year]: state[year] || { ...DEFAULT_B_PARAMS },
+        }));
+        setParamsM((state) => ({
+            ...state,
+            [year]: state[year] || { ...DEFAULT_M_PARAMS },
         }));
     };
 
@@ -541,11 +700,31 @@ export default function InputPage() {
         setCurrentYear(year);
     };
 
-    const handleParamChange = (key, value) => {
+    const handleParamChangeB = (key, value) => {
         setParamsB((state) => ({
             ...state,
             [currentYear]: {
                 ...(state[currentYear] || { ...DEFAULT_B_PARAMS }),
+                [key]: value,
+            },
+        }));
+    };
+
+    const handleParamChangeA = (key, value) => {
+        setParamsA((state) => ({
+            ...state,
+            [currentYear]: {
+                ...(state[currentYear] || { ...DEFAULT_A_PARAMS }),
+                [key]: value,
+            },
+        }));
+    };
+
+    const handleParamChangeM = (key, value) => {
+        setParamsM((state) => ({
+            ...state,
+            [currentYear]: {
+                ...(state[currentYear] || { ...DEFAULT_M_PARAMS }),
                 [key]: value,
             },
         }));
@@ -556,7 +735,9 @@ export default function InputPage() {
         if (busy) return;
         setBusy(true);
         try {
+            setParamsA({ [YEAR_NOW]: { ...DEFAULT_A_PARAMS } });
             setParamsB({ [YEAR_NOW]: { ...DEFAULT_B_PARAMS } });
+            setParamsM({ [YEAR_NOW]: { ...DEFAULT_M_PARAMS } });
             setYears([YEAR_NOW]);
             setCurrentYear(YEAR_NOW);
             localStorage.removeItem(STORAGE_KEY);
@@ -570,11 +751,29 @@ export default function InputPage() {
 
     // Удалить только текущий год
     const handleDeleteCurrentYear = () => {
+        setParamsA((prev) => {
+            const copy = { ...prev };
+            delete copy[currentYear];
+            if (!Object.keys(copy).length) {
+                copy[YEAR_NOW] = { ...DEFAULT_A_PARAMS };
+            }
+            return copy;
+        });
+
         setParamsB((prev) => {
             const copy = { ...prev };
             delete copy[currentYear];
             if (!Object.keys(copy).length) {
                 copy[YEAR_NOW] = { ...DEFAULT_B_PARAMS };
+            }
+            return copy;
+        });
+
+        setParamsM((prev) => {
+            const copy = { ...prev };
+            delete copy[currentYear];
+            if (!Object.keys(copy).length) {
+                copy[YEAR_NOW] = { ...DEFAULT_M_PARAMS };
             }
             return copy;
         });
@@ -590,7 +789,7 @@ export default function InputPage() {
     // ---------------- 4. Экспорт / импорт ----------------
     const handleExport = () => {
         try {
-            const payload = buildExportPayload(years, paramsB, inputMode);
+            const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
 
             const blob = new Blob([JSON.stringify(payload, null, 2)], {
                 type: 'application/json;charset=utf-8',
@@ -626,11 +825,44 @@ export default function InputPage() {
             const json = JSON.parse(text);
             if (!json || !Array.isArray(json.classes)) throw new Error('Неверный формат JSON');
 
+            const aBlock = json.classes.find((c) => c.classType === 'A');
             const bBlock = json.classes.find((c) => c.classType === 'B');
+            const mBlock = json.classes.find((c) => c.classType === 'M');
             if (!bBlock || !Array.isArray(bBlock.data)) throw new Error('Нет данных класса B');
 
+            const mapA = {};
             const map = {};
+            const mapM = {};
             const ys = [];
+
+            if (aBlock && Array.isArray(aBlock.data)) {
+                for (const row of aBlock.data) {
+                    if (!row.year) continue;
+                    ys.push(row.year);
+                    mapA[row.year] = {
+                        PNo: row.PNo ?? '',
+                        PNv: row.PNv ?? '',
+                        PNz: row.PNz ?? '',
+                        DIo: row.DIo ?? '',
+                        DIv: row.DIv ?? '',
+                        DIz: row.DIz ?? '',
+                        sumPoints: row.sumPoints ?? '',
+                        k: firstDefinedValue(row.k, row.K, 3),
+                        WL2022: row.WL2022 ?? '',
+                        WL2023: row.WL2023 ?? '',
+                        WL2024: row.WL2024 ?? '',
+                        NPR2022: row.NPR2022 ?? '',
+                        NPR2023: row.NPR2023 ?? '',
+                        NPR2024: row.NPR2024 ?? '',
+                        DN2022: row.DN2022 ?? '',
+                        DN2023: row.DN2023 ?? '',
+                        DN2024: row.DN2024 ?? '',
+                        RDN2022: row.RDN2022 ?? '',
+                        RDN2023: row.RDN2023 ?? '',
+                        RDN2024: row.RDN2024 ?? '',
+                    };
+                }
+            }
             for (const row of bBlock.data) {
                 if (!row.year) continue;
                 ys.push(row.year);
@@ -732,17 +964,40 @@ export default function InputPage() {
                     map[row.year][`NOA${y}`] = firstDefinedValue(row[`NOA${y}`], row[`Noa${y}`]);
                 }
             }
+
+            if (mBlock && Array.isArray(mBlock.data)) {
+                for (const row of mBlock.data) {
+                    if (!row.year) continue;
+                    ys.push(row.year);
+                    mapM[row.year] = {
+                        k: firstDefinedValue(row.k, row.K, 3),
+                        M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
+                        N: row.N ?? '',
+                        Npr: row.Npr ?? '',
+                        VO: row.VO ?? '',
+                        PO: row.PO ?? '',
+                        NR2023: row.NR2023 ?? '',
+                        NR2024: row.NR2024 ?? '',
+                        NR2025: row.NR2025 ?? '',
+                    };
+                }
+            }
+
             const uniqueYears = [...new Set(ys)].sort((a, b) => a - b);
             if (!uniqueYears.length) throw new Error('Пустые данные');
 
+            setParamsA(mapA);
             setParamsB(map);
+            setParamsM(mapM);
             setYears(uniqueYears);
             setCurrentYear(uniqueYears[0]);
 
             const payload = {
                 years: uniqueYears,
                 currentYear: uniqueYears[0],
+                paramsA: mapA,
                 paramsB: map,
+                paramsM: mapM,
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 
@@ -759,9 +1014,17 @@ export default function InputPage() {
             prev.includes(year) ? prev.slice().sort((a, b) => a - b) : [...prev, year].sort((a, b) => a - b),
         );
         setCurrentYear(year);
+        setParamsA((state) => ({
+            ...state,
+            [year]: state[year] || { ...DEFAULT_A_PARAMS },
+        }));
         setParamsB((state) => ({
             ...state,
             [year]: state[year] || { ...DEFAULT_B_PARAMS },
+        }));
+        setParamsM((state) => ({
+            ...state,
+            [year]: state[year] || { ...DEFAULT_M_PARAMS },
         }));
     };
 
@@ -770,7 +1033,7 @@ export default function InputPage() {
         setBusy(true);
         try {
             const delay = 500;
-            const payload = buildExportPayload(years, paramsB, inputMode);
+            const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
             const object = await Api.calcMulti(payload);
 
             const iteration = object.classes.filter(c => c.classType === "B")[0].data[0].iteration
@@ -788,7 +1051,9 @@ export default function InputPage() {
         }
     };
 
+    const paramsAForYear = paramsA[currentYear] || DEFAULT_A_PARAMS;
     const params = paramsB[currentYear] || DEFAULT_B_PARAMS;
+    const paramsMForYear = paramsM[currentYear] || DEFAULT_M_PARAMS;
 
     const kYears = getKYears(params);
     const canonicalYears2022 = yearsByK(kYears);
@@ -988,6 +1253,41 @@ export default function InputPage() {
         }
         : fieldsByGroupMetrics;
 
+    const aGroupTitles = {
+        1: 'Корректирующий коэффициент',
+        2: 'Сумма баллов',
+        3: 'A31 Публикации на 100 НПР',
+        4: 'A32 Доходы от НИОКР на 1 НПР',
+        5: 'A33 Внебюджетные НИОКР на 1 НПР',
+    };
+
+    const aFieldsByGroup = {
+        1: [
+            ['PNo', 'PNo'],
+            ['PNv', 'PNv'],
+            ['PNz', 'PNz'],
+            ['DIo', 'DIo'],
+            ['DIv', 'DIv'],
+            ['DIz', 'DIz'],
+        ],
+        2: [['sumPoints', 'sumPoints']],
+        3: [['WL2022', 'WL2022'], ['WL2023', 'WL2023'], ['WL2024', 'WL2024'], ['NPR2022', 'NPR2022'], ['NPR2023', 'NPR2023'], ['NPR2024', 'NPR2024']],
+        4: [['DN2022', 'DN2022'], ['DN2023', 'DN2023'], ['DN2024', 'DN2024'], ['NPR2022', 'NPR2022'], ['NPR2023', 'NPR2023'], ['NPR2024', 'NPR2024']],
+        5: [['RDN2022', 'RDN2022'], ['RDN2023', 'RDN2023'], ['RDN2024', 'RDN2024'], ['NPR2022', 'NPR2022'], ['NPR2023', 'NPR2023'], ['NPR2024', 'NPR2024']],
+    };
+
+    const mGroupTitles = {
+        1: 'M31 Доходы выпускников / ПМ',
+        2: 'M32 Сохранность контингента',
+        3: 'M33 Востребованность на рынке труда',
+    };
+
+    const mFieldsByGroup = {
+        1: [['M31_o', 'M31_o']],
+        2: [['N', 'N'], ['Npr', 'Npr'], ['VO', 'VO'], ['PO', 'PO']],
+        3: [['NR2023', 'NR2023'], ['NR2024', 'NR2024'], ['NR2025', 'NR2025']],
+    };
+
     return (
         <>
             <Analytics
@@ -1043,27 +1343,27 @@ export default function InputPage() {
                 <div className="input-grid">
                     <ClassList
                         className="Класс A"
-                        fieldsByGroup={{}}
-                        params={{}}
-                        handleParamChange={handleParamChange}
+                        fieldsByGroup={aFieldsByGroup}
+                        params={paramsAForYear}
+                        handleParamChange={handleParamChangeA}
                         metricNames={{}}
-                        groupTitles={{}}
+                        groupTitles={aGroupTitles}
                     />
                     <ClassList
                         className="Класс B"
                         fieldsByGroup={fieldsByGroup}
                         params={params}
-                        handleParamChange={handleParamChange}
+                        handleParamChange={handleParamChangeB}
                         metricNames={metricNames}
                         groupTitles={inputMode === 'totals' ? totalsModeGroupTitles : metricModeGroupTitles}
                     />
                     <ClassList
-                        className="Класс C"
-                        fieldsByGroup={{}}
-                        params={{}}
-                        handleParamChange={handleParamChange}
+                        className="Класс M"
+                        fieldsByGroup={mFieldsByGroup}
+                        params={paramsMForYear}
+                        handleParamChange={handleParamChangeM}
                         metricNames={{}}
-                        groupTitles={{}}
+                        groupTitles={mGroupTitles}
                     />
                 </div>
 
