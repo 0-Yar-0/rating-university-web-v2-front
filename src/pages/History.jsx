@@ -3,7 +3,34 @@ import { Api } from '../api';
 
 const STORAGE_KEY_ITERATION = 'selected_iteration';
 
-export default function History({ items, setRows, selectedIteration, setSelectedIteration }) {
+const META_KEYS = new Set([
+    'year',
+    'iteration',
+    'calcResultId',
+    'classType',
+    'sumA',
+    'sumB',
+    'sumM',
+    'TOTAL',
+    'A_TOTAL',
+    'B_TOTAL',
+    'M_TOTAL',
+    'A_TOTAL_WITH_KI',
+    'B_TOTAL_WITH_KI',
+    'M_TOTAL_WITH_KI',
+    'KI',
+    'KI_A',
+    'KI_B',
+    'KI_M',
+]);
+
+const resolveMetricKeys = (row) => Object.keys(row || {}).filter((key) => {
+    if (key.startsWith('code')) return false;
+    if (META_KEYS.has(key)) return false;
+    return typeof row[key] === 'number' && Number.isFinite(row[key]);
+});
+
+export default function History({ items, setRows, selectedIteration, setSelectedIteration, classType = 'B' }) {
     // Удаление всей истории (как ты уже делал через Api.clearHistory)
     const handleClearHistory = async () => {
         if (!window.confirm('Точно удалить всю историю расчётов?')) return;
@@ -41,17 +68,12 @@ export default function History({ items, setRows, selectedIteration, setSelected
                     <div key={it.iter} className={`history-item ${it.iter === selectedIteration ? "selected" : ""}`} onClick={handleOpenIteration(it.iter)}>
                         <div className="history-main">
                             <span className="history-title">Расчёт #{it.iter}</span>
-                            <span className="history-classes">Класс B</span>
+                            <span className="history-classes">Класс {classType}</span>
                         </div>
                         <div className="history-summary">
                             {it.results?.map((row) => (
                                 <span key={row.year} className="history-chip">
-                                    {row.year}: {
-                                        Object.keys(row)
-                                            .filter(k => /^b\d+$/.test(k))
-                                            .map(k => `${k.toUpperCase()}=${row[k].toFixed(2)}`)
-                                            .join(', ')
-                                    }
+                                    {row.year}: {resolveMetricKeys(row).map((k) => `${k.toUpperCase()}=${Number(row[k]).toFixed(2)}`).join(', ')}
                                 </span>
                             ))}
                         </div>

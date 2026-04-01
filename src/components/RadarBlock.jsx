@@ -30,6 +30,13 @@ const METRIC_MAX = {
     b44: 5,
 };
 
+const getObservedMetricMax = (rows, key) => {
+    const values = rows
+        .map((row) => Number(row?.[key]))
+        .filter((value) => Number.isFinite(value));
+    return values.length ? Math.max(...values, 0) : 0;
+};
+
 /**
  * rows: активные строки (учитывая чекбоксы)
  * metricNames: { codeB11, codeB12, codeB13, codeB21 }
@@ -53,7 +60,8 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
     // [{ metric: 'B11', y_2024: ..., y_2025: ... }, ...]
     const data = metrics.map((m) => {
         const row = { metric: m.label };
-        const metricMax = METRIC_MAX[m.key] ?? 1;
+        const observedMax = getObservedMetricMax(rows, m.key);
+        const metricMax = METRIC_MAX[m.key] ?? (observedMax > 0 ? observedMax : 1);
         rows.forEach((r) => {
             const rawValue = Number(r[m.key]) || 0;
             if (viewMode === 'value') {
@@ -71,7 +79,10 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
             const value = Number(r[m.key]);
             if (!Number.isFinite(value)) return 0;
             if (viewMode === 'value') return value;
-            const metricMax = METRIC_MAX[m.key] ?? 1;
+            const metricMax = METRIC_MAX[m.key] ?? (() => {
+                const observedMax = getObservedMetricMax(rows, m.key);
+                return observedMax > 0 ? observedMax : 1;
+            })();
             return metricMax > 0 ? (value / metricMax) * 100 : 0;
         }),
     );

@@ -1,6 +1,12 @@
 // src/components/ResultsTable.jsx
 import React, { useState } from 'react';
 
+const TOTAL_KEY_PRIORITY = {
+    A: ['A_TOTAL_WITH_KI', 'A_TOTAL', 'sumA', 'TOTAL'],
+    B: ['B_TOTAL_WITH_KI', 'B_TOTAL', 'sumB', 'TOTAL'],
+    M: ['M_TOTAL_WITH_KI', 'M_TOTAL', 'sumM', 'TOTAL'],
+};
+
 export default function ResultsTable({
     rows,
     metricNames,
@@ -8,6 +14,8 @@ export default function ResultsTable({
     onMetricNamesChange,
     visibleYears,
     onToggleYear,
+    allowMetricNameEditing = true,
+    classType = 'B',
 }) {
     const [editingKey, setEditingKey] = useState(null);
     const [editValue, setEditValue] = useState('');
@@ -23,20 +31,16 @@ export default function ResultsTable({
     };
 
     const commitEdit = () => {
-        if (!editingKey) return;
+        if (!editingKey || !onMetricNamesChange) return;
 
         const patch = { [editingKey]: editValue || editingKey.toUpperCase() };
-        console.log('commitEdit, patch = ', patch);
-
-        // send patch to parent handler
         onMetricNamesChange(patch);
 
         setEditingKey(null);
         setEditValue('');
     };
 
-    // every metric key should be editable; API will ignore extras it doesn't support
-    const editableMetrics = metricKeys.slice();
+    const editableMetrics = allowMetricNameEditing ? metricKeys.slice() : [];
 
     const renderHeaderCell = (key, label) => (
         <th className="results-table-header">
@@ -70,6 +74,16 @@ export default function ResultsTable({
         return value.toFixed(3).replace(/\.?0+$/, '');
     };
 
+    const resolveTotalValue = (row) => {
+        const priority = TOTAL_KEY_PRIORITY[classType] || TOTAL_KEY_PRIORITY.B;
+        for (const key of priority) {
+            const value = Number(row?.[key]);
+            if (Number.isFinite(value)) return value;
+        }
+
+        return null;
+    };
+
     return (
         <div className="card results-table-wrapper">
             <table className="results-table">
@@ -79,16 +93,15 @@ export default function ResultsTable({
                         {metricKeys.map((k) => {
                             const label = metricNames[`code${k.toUpperCase()}`] || k.toUpperCase();
                             if (editableMetrics.includes(k)) {
-                                // convert b11 -> codeB11 etc
                                 const nameKey = `code${k.toUpperCase()}`;
                                 return renderHeaderCell(nameKey, label);
-                            } else {
-                                return (
-                                    <th className="results-table-header" key={k}>
-                                        {label}
-                                    </th>
-                                );
                             }
+
+                            return (
+                                <th className="results-table-header" key={k}>
+                                    {label}
+                                </th>
+                            );
                         })}
                         <th className="results-table-header">Сумма баллов</th>
                         <th className="results-table-header">Показать</th>
@@ -103,7 +116,7 @@ export default function ResultsTable({
                                     {formatNumber(r[k])}
                                 </td>
                             ))}
-                            <td className="results-table-cell">{formatNumber(r.sumB)}</td>
+                            <td className="results-table-cell">{formatNumber(resolveTotalValue(r))}</td>
                             <td className="results-table-cell" style={{ textAlign: 'center' }}>
                                 <input
                                     type="checkbox"
