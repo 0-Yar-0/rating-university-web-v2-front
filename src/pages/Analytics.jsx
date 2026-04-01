@@ -6,16 +6,52 @@ import RadarBlock from '../components/RadarBlock.jsx';
 import LineGraphBlock from '../components/LineGraphBlock.jsx';
 
 const STORAGE_KEY = 'unirating_b_params_v2';
+const METRIC_EXCLUDE_KEYS = new Set([
+    'year',
+    'iteration',
+    'calcResultId',
+    'classType',
+    'sumA',
+    'sumB',
+    'sumM',
+    'TOTAL',
+    'A_TOTAL',
+    'B_TOTAL',
+    'M_TOTAL',
+    'A_TOTAL_WITH_KI',
+    'B_TOTAL_WITH_KI',
+    'M_TOTAL_WITH_KI',
+    'KI',
+    'KI_A',
+    'KI_B',
+    'KI_M',
+]);
 
-export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
+const resolveMetricKeys = (rows) => {
+    if (!rows.length) {
+        return [];
+    }
+
+    return Object.keys(rows[0]).filter((key) => {
+        if (key.startsWith('code')) return false;
+        if (METRIC_EXCLUDE_KEYS.has(key)) return false;
+        return typeof rows[0][key] === 'number' && Number.isFinite(rows[0][key]);
+    });
+};
+
+export default function AnalyticsPage({
+    rows,
+    metricNames,
+    setMetricNames,
+    classType,
+    availableClassTypes = [],
+    onClassTypeChange,
+}) {
     // какие годы отображать (true = показываем)
     const [visibleYears, setVisibleYears] = useState({});
     const [radarViewMode, setRadarViewMode] = useState('percent');
 
-    // список ключей метрик (b11, b12, ... b33) вычисляется из первой строки
-    const metricKeys = rows.length
-        ? Object.keys(rows[0]).filter(k => /^b\d+$/.test(k))
-        : [];
+    const metricKeys = resolveMetricKeys(rows);
 
     // грузим последний расчёт класса B
     useEffect(() => {
@@ -66,10 +102,22 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
 
     // строки, которые реально показываем в графиках
     const activeRows = rows.filter((r) => visibleYears[r.year]);
+    const classOptions = Array.from(new Set(availableClassTypes.length ? availableClassTypes : ['A', 'B', 'M']));
 
     return (
         <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <span>Класс:</span>
+                <select
+                    className="num-input"
+                    value={classType || 'B'}
+                    onChange={(e) => onClassTypeChange?.(e.target.value)}
+                    style={{ maxWidth: 120 }}
+                >
+                    {classOptions.map((option) => (
+                        <option key={option} value={option}>{option}</option>
+                    ))}
+                </select>
                 <span>Паутинная диаграмма:</span>
                 <select
                     className="num-input"
@@ -88,8 +136,9 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
                     metricNames={metricNames}
                     metricKeys={metricKeys}
                     viewMode={radarViewMode}
+                    classType={classType}
                 />
-                <LineGraphBlock rows={activeRows} />
+                <LineGraphBlock rows={activeRows} classType={classType} />
             </div>
 
             <ResultsTable
@@ -99,6 +148,7 @@ export default function AnalyticsPage({rows, metricNames, setMetricNames}) {
                 onMetricNamesChange={handleMetricNamesChange}
                 visibleYears={visibleYears}
                 onToggleYear={handleToggleYear}
+                allowMetricNameEditing={classType === 'B'}
             />
         </>
 

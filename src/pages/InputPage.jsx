@@ -52,10 +52,10 @@ const DEFAULT_B_PARAMS = {
     NAz: '',
     PNo: '',
     PNv: '',
-    Pz: '',
+    PNz: '',
     Po: '',
     Pv: '',
-    PNz: '',
+    Pz: '',
     DIo: '',
     DIv: '',
     DIz: '',
@@ -727,6 +727,8 @@ export default function InputPage() {
         codeB21: 'B21',
     });
     const [calcSummary, setCalcSummary] = useState([]);
+    const [historyClasses, setHistoryClasses] = useState([]);
+    const [selectedAnalyticsClass, setSelectedAnalyticsClass] = useState('B');
 
     // ---------------- For History.jsx ----------------
     const [items, setItems] = useState([]);
@@ -1093,30 +1095,45 @@ export default function InputPage() {
         // ---------------- For Analytics.jsx and History.jsx ----------------
         Api.getHistoryAll()
             .then(object => {
-                const items = object.classes.filter(c => c.classType === "B")[0].items
-                let results = []
-                const targetIter = _selectedIteration || selectedIteration;
-
-                if (items.length) {
-                    results = targetIter
-                        ? items.find(item => item.iter === targetIter)?.results
-                        : items.reduce((maxItem, item) => item.iter > maxItem.iter ? item : maxItem).results;
-                    results = results || [];
-
-                    const firstRes = results[0] || {};
-                    const newNames = {};
-                    Object.keys(firstRes).forEach((k) => {
-                        if (k.startsWith('codeB')) {
-                            newNames[k] = firstRes[k] || k.toUpperCase();
-                        }
-                    });
-                    setMetricNames(newNames);
-                }
-
-                setRows(results)
-                setItems(items)
+                const classes = Array.isArray(object?.classes) ? object.classes : [];
+                setHistoryClasses(classes);
+                setSelectedAnalyticsClass((current) => (
+                    classes.some((c) => c.classType === current)
+                        ? current
+                        : (classes[0]?.classType || current)
+                ));
             })
     }, [selectedIteration]);
+
+    useEffect(() => {
+        const selectedClass = historyClasses.find((c) => c.classType === selectedAnalyticsClass)
+            || historyClasses[0]
+            || null;
+        const items = Array.isArray(selectedClass?.items) ? selectedClass.items : [];
+        const targetIter = _selectedIteration || selectedIteration;
+
+        let results = [];
+        if (items.length) {
+            const selectedItem = targetIter
+                ? items.find((item) => item.iter === targetIter)
+                : items.reduce((maxItem, item) => (item.iter > maxItem.iter ? item : maxItem));
+            results = selectedItem?.results || [];
+
+            const firstRes = results[0] || {};
+            const newNames = {};
+            Object.keys(firstRes).forEach((k) => {
+                if (k.startsWith('code')) {
+                    newNames[k] = firstRes[k] || k.toUpperCase();
+                }
+            });
+            setMetricNames(newNames);
+        } else {
+            setMetricNames({});
+        }
+
+        setRows(results);
+        setItems(items);
+    }, [historyClasses, selectedAnalyticsClass, selectedIteration]);
 
     // ---------------- 2. Автосохранение ----------------
     useEffect(() => {
@@ -1389,6 +1406,9 @@ export default function InputPage() {
                     PNo: firstDefinedValue(row.PNo, ''),
                     PNv: firstDefinedValue(row.PNv, ''),
                     PNz: firstDefinedValue(row.PNz, ''),
+                    Po: firstDefinedValue(row.Po, ''),
+                    Pv: firstDefinedValue(row.Pv, ''),
+                    Pz: firstDefinedValue(row.Pz, ''),
                     DIo: firstDefinedValue(row.DIo, row.DI),
                     DIv: firstDefinedValue(row.DIv, ''),
                     DIz: firstDefinedValue(row.DIz, ''),
@@ -2004,6 +2024,9 @@ export default function InputPage() {
                 rows={rows}
                 metricNames={metricNames}
                 setMetricNames={setMetricNames}
+                classType={selectedAnalyticsClass}
+                availableClassTypes={historyClasses.map((item) => item.classType)}
+                onClassTypeChange={setSelectedAnalyticsClass}
             />
             <div className="card big-card">
                 <div className="card-header-row">
@@ -2113,6 +2136,7 @@ export default function InputPage() {
                 setRows={setRows}
                 selectedIteration={selectedIteration}
                 setSelectedIteration={setSelectedIteration}
+                classType={selectedAnalyticsClass}
             />
         </>
     );

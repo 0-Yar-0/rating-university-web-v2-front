@@ -1,7 +1,25 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 
-export default function LineGraphBlock({ rows }) {
+const TOTAL_KEY_PRIORITY = {
+    A: ['A_TOTAL_WITH_KI', 'A_TOTAL', 'sumA', 'TOTAL'],
+    B: ['B_TOTAL_WITH_KI', 'B_TOTAL', 'sumB', 'TOTAL'],
+    M: ['M_TOTAL_WITH_KI', 'M_TOTAL', 'sumM', 'TOTAL'],
+};
+
+const resolveTotalValue = (row, classType) => {
+    const priority = TOTAL_KEY_PRIORITY[classType] || TOTAL_KEY_PRIORITY.B;
+    for (const key of priority) {
+        const value = Number(row?.[key]);
+        if (Number.isFinite(value)) return value;
+    }
+
+    const fallbackKey = Object.keys(row || {}).find((key) => /TOTAL|sum[A-Z]?/i.test(key));
+    const fallbackValue = Number(row?.[fallbackKey]);
+    return Number.isFinite(fallbackValue) ? fallbackValue : 0;
+};
+
+export default function LineGraphBlock({ rows, classType = 'B' }) {
     if (!rows || !rows.length) return (
         <div className="card radar-card">
             <h3>Линейный график</h3>
@@ -11,7 +29,7 @@ export default function LineGraphBlock({ rows }) {
 
     const data = rows.map((r) => ({
         year: r.year,
-        total: r.sumB,
+        total: resolveTotalValue(r, classType),
     }));
 
     const totals = data
