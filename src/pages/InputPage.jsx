@@ -1103,12 +1103,22 @@ export default function InputPage() {
                         : (classes[0]?.classType || current)
                 ));
             })
+            .catch((err) => {
+                console.warn('Ошибка загрузки истории:', err);
+                setHistoryClasses([]);
+            })
     }, [selectedIteration]);
 
     useEffect(() => {
         const selectedClass = historyClasses.find((c) => c.classType === selectedAnalyticsClass)
-            || historyClasses[0]
-            || null;
+            || historyClasses[0];
+        if (!selectedClass) {
+            setRows([]);
+            setItems([]);
+            setMetricNames({});
+            return;
+        }
+
         const items = Array.isArray(selectedClass?.items) ? selectedClass.items : [];
         const targetIter = selectedIteration;
 
