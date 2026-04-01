@@ -155,6 +155,18 @@ const DEFAULT_A_PARAMS = {
     RDN2022: '',
     RDN2023: '',
     RDN2024: '',
+    KI_A: '',
+    A11: '',
+    A21: '',
+    A22: '',
+    A23: '',
+    A31: '',
+    A32: '',
+    A33: '',
+    A34: '',
+    A35: '',
+    A36: '',
+    A37: '',
 };
 
 const DEFAULT_M_PARAMS = {
@@ -167,6 +179,17 @@ const DEFAULT_M_PARAMS = {
     NR2023: '',
     NR2024: '',
     NR2025: '',
+    KI_M: '',
+    M11: '',
+    M12: '',
+    M13: '',
+    M14: '',
+    M21: '',
+    M22: '',
+    M23: '',
+    M31: '',
+    M32: '',
+    M33: '',
 };
 
 function normalizeNumber(v) {
@@ -208,6 +231,7 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
         .map((year) => {
             const p = paramsA[year] || DEFAULT_A_PARAMS;
             const kYears = getKYears(p);
+            const includeDirectMetrics = inputMode === 'totals';
 
             return {
                 year,
@@ -231,6 +255,22 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 RDN2022: normalizeNumber(p.RDN2022),
                 RDN2023: normalizeNumber(p.RDN2023),
                 RDN2024: normalizeNumber(p.RDN2024),
+                ...(includeDirectMetrics
+                    ? {
+                        KI_A: normalizeNumber(firstDefinedValue(p.KI_A, p.A_KI, p.KI)),
+                        A11: normalizeNumber(p.A11),
+                        A21: normalizeNumber(p.A21),
+                        A22: normalizeNumber(p.A22),
+                        A23: normalizeNumber(p.A23),
+                        A31: normalizeNumber(p.A31),
+                        A32: normalizeNumber(p.A32),
+                        A33: normalizeNumber(p.A33),
+                        A34: normalizeNumber(p.A34),
+                        A35: normalizeNumber(p.A35),
+                        A36: normalizeNumber(p.A36),
+                        A37: normalizeNumber(p.A37),
+                    }
+                    : {}),
             };
         })
         .filter((row) => row.year);
@@ -305,6 +345,7 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 DIz: normalizeNumber(p.DIz),
                 ...(includeDirectMetrics
                     ? {
+                        KI_B: normalizeNumber(firstDefinedValue(p.KI_B, p.B_KI, p.KI)),
                         B11: normalizeNumber(p.B11),
                         B12: normalizeNumber(p.B12),
                         B13: normalizeNumber(p.B13),
@@ -355,6 +396,7 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
         .map((year) => {
             const p = paramsM[year] || DEFAULT_M_PARAMS;
             const kYears = getKYears(p);
+            const includeDirectMetrics = inputMode === 'totals';
 
             return {
                 year,
@@ -367,6 +409,21 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 NR2023: normalizeNumber(p.NR2023),
                 NR2024: normalizeNumber(p.NR2024),
                 NR2025: normalizeNumber(p.NR2025),
+                ...(includeDirectMetrics
+                    ? {
+                        KI_M: normalizeNumber(firstDefinedValue(p.KI_M, p.M_KI, p.KI)),
+                        M11: normalizeNumber(p.M11),
+                        M12: normalizeNumber(p.M12),
+                        M13: normalizeNumber(p.M13),
+                        M14: normalizeNumber(p.M14),
+                        M21: normalizeNumber(p.M21),
+                        M22: normalizeNumber(p.M22),
+                        M23: normalizeNumber(p.M23),
+                        M31: normalizeNumber(firstDefinedValue(p.M31, p.M31_o)),
+                        M32: normalizeNumber(p.M32),
+                        M33: normalizeNumber(p.M33),
+                    }
+                    : {}),
             };
         })
         .filter((row) => row.year);
@@ -503,6 +560,18 @@ export default function InputPage() {
                         RDN2022: row.RDN2022 ?? '',
                         RDN2023: row.RDN2023 ?? '',
                         RDN2024: row.RDN2024 ?? '',
+                        KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.KI),
+                        A11: firstDefinedValue(row.A11, row.a11),
+                        A21: firstDefinedValue(row.A21, row.a21),
+                        A22: firstDefinedValue(row.A22, row.a22),
+                        A23: firstDefinedValue(row.A23, row.a23),
+                        A31: firstDefinedValue(row.A31, row.a31),
+                        A32: firstDefinedValue(row.A32, row.a32),
+                        A33: firstDefinedValue(row.A33, row.a33),
+                        A34: firstDefinedValue(row.A34, row.a34),
+                        A35: firstDefinedValue(row.A35, row.a35),
+                        A36: firstDefinedValue(row.A36, row.a36),
+                        A37: firstDefinedValue(row.A37, row.a37),
                     };
                 }
 
@@ -586,6 +655,7 @@ export default function InputPage() {
                         B42: firstDefinedValue(row.B42, row.b42),
                         B43: firstDefinedValue(row.B43, row.b43),
                         B44: firstDefinedValue(row.B44, row.b44),
+                        KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.KI),
                     };
 
                     const dynamicYears = yearsByK(getKYears(map[row.year]));
@@ -622,6 +692,17 @@ export default function InputPage() {
                         NR2023: row.NR2023 ?? '',
                         NR2024: row.NR2024 ?? '',
                         NR2025: row.NR2025 ?? '',
+                        KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI),
+                        M11: firstDefinedValue(row.M11, row.m11),
+                        M12: firstDefinedValue(row.M12, row.m12),
+                        M13: firstDefinedValue(row.M13, row.m13),
+                        M14: firstDefinedValue(row.M14, row.m14),
+                        M21: firstDefinedValue(row.M21, row.m21),
+                        M22: firstDefinedValue(row.M22, row.m22),
+                        M23: firstDefinedValue(row.M23, row.m23),
+                        M31: firstDefinedValue(row.M31, row.m31, row.M31_o, row.M31_raw),
+                        M32: firstDefinedValue(row.M32, row.m32),
+                        M33: firstDefinedValue(row.M33, row.m33),
                     };
                 }
 
@@ -860,6 +941,18 @@ export default function InputPage() {
                         RDN2022: row.RDN2022 ?? '',
                         RDN2023: row.RDN2023 ?? '',
                         RDN2024: row.RDN2024 ?? '',
+                        KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.KI),
+                        A11: firstDefinedValue(row.A11, row.a11),
+                        A21: firstDefinedValue(row.A21, row.a21),
+                        A22: firstDefinedValue(row.A22, row.a22),
+                        A23: firstDefinedValue(row.A23, row.a23),
+                        A31: firstDefinedValue(row.A31, row.a31),
+                        A32: firstDefinedValue(row.A32, row.a32),
+                        A33: firstDefinedValue(row.A33, row.a33),
+                        A34: firstDefinedValue(row.A34, row.a34),
+                        A35: firstDefinedValue(row.A35, row.a35),
+                        A36: firstDefinedValue(row.A36, row.a36),
+                        A37: firstDefinedValue(row.A37, row.a37),
                     };
                 }
             }
@@ -941,6 +1034,7 @@ export default function InputPage() {
                     B42: firstDefinedValue(row.B42, row.b42),
                     B43: firstDefinedValue(row.B43, row.b43),
                     B44: firstDefinedValue(row.B44, row.b44),
+                    KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.KI),
                 };
 
                 const dynamicYears = yearsByK(getKYears(map[row.year]));
@@ -979,6 +1073,17 @@ export default function InputPage() {
                         NR2023: row.NR2023 ?? '',
                         NR2024: row.NR2024 ?? '',
                         NR2025: row.NR2025 ?? '',
+                        KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI),
+                        M11: firstDefinedValue(row.M11, row.m11),
+                        M12: firstDefinedValue(row.M12, row.m12),
+                        M13: firstDefinedValue(row.M13, row.m13),
+                        M14: firstDefinedValue(row.M14, row.m14),
+                        M21: firstDefinedValue(row.M21, row.m21),
+                        M22: firstDefinedValue(row.M22, row.m22),
+                        M23: firstDefinedValue(row.M23, row.m23),
+                        M31: firstDefinedValue(row.M31, row.m31, row.M31_o, row.M31_raw),
+                        M32: firstDefinedValue(row.M32, row.m32),
+                        M33: firstDefinedValue(row.M33, row.m33),
                     };
                 }
             }
@@ -1148,8 +1253,18 @@ export default function InputPage() {
     ];
 
     const totalsModeGroupTitles = {
-        1: 'Корректирующий коэффициент',
+        1: 'Коэффициент KI класса B',
         2: 'Параметры B',
+    };
+
+    const totalsModeGroupTitlesA = {
+        1: 'Коэффициент KI класса A',
+        2: 'Параметры A',
+    };
+
+    const totalsModeGroupTitlesM = {
+        1: 'Коэффициент KI класса M',
+        2: 'Параметры M',
     };
 
     const metricModeGroupTitles = {
@@ -1246,9 +1361,40 @@ export default function InputPage() {
         18: b44Fields,
     };
 
+    const totalsKiFieldsA = [['KI_A', 'KI_A']];
+    const totalsFieldsA = [
+        ['A11', 'A11'],
+        ['A21', 'A21'],
+        ['A22', 'A22'],
+        ['A23', 'A23'],
+        ['A31', 'A31'],
+        ['A32', 'A32'],
+        ['A33', 'A33'],
+        ['A34', 'A34'],
+        ['A35', 'A35'],
+        ['A36', 'A36'],
+        ['A37', 'A37'],
+    ];
+
+    const totalsKiFieldsB = [['KI_B', 'KI_B']];
+
+    const totalsKiFieldsM = [['KI_M', 'KI_M']];
+    const totalsFieldsM = [
+        ['M11', 'M11'],
+        ['M12', 'M12'],
+        ['M13', 'M13'],
+        ['M14', 'M14'],
+        ['M21', 'M21'],
+        ['M22', 'M22'],
+        ['M23', 'M23'],
+        ['M31', 'M31'],
+        ['M32', 'M32'],
+        ['M33', 'M33'],
+    ];
+
     const fieldsByGroup = inputMode === 'totals'
         ? {
-            1: correctiveCoefficientFields,
+            1: totalsKiFieldsB,
             2: totalsFields,
         }
         : fieldsByGroupMetrics;
@@ -1259,6 +1405,11 @@ export default function InputPage() {
         3: 'A31 Публикации на 100 НПР',
         4: 'A32 Доходы от НИОКР на 1 НПР',
         5: 'A33 Внебюджетные НИОКР на 1 НПР',
+    };
+
+    const aFieldsByGroupTotals = {
+        1: totalsKiFieldsA,
+        2: totalsFieldsA,
     };
 
     const aFieldsByGroup = {
@@ -1280,6 +1431,11 @@ export default function InputPage() {
         1: 'M31 Доходы выпускников / ПМ',
         2: 'M32 Сохранность контингента',
         3: 'M33 Востребованность на рынке труда',
+    };
+
+    const mFieldsByGroupTotals = {
+        1: totalsKiFieldsM,
+        2: totalsFieldsM,
     };
 
     const mFieldsByGroup = {
@@ -1343,11 +1499,11 @@ export default function InputPage() {
                 <div className="input-grid">
                     <ClassList
                         className="Класс A"
-                        fieldsByGroup={aFieldsByGroup}
+                        fieldsByGroup={inputMode === 'totals' ? aFieldsByGroupTotals : aFieldsByGroup}
                         params={paramsAForYear}
                         handleParamChange={handleParamChangeA}
                         metricNames={{}}
-                        groupTitles={aGroupTitles}
+                        groupTitles={inputMode === 'totals' ? totalsModeGroupTitlesA : aGroupTitles}
                     />
                     <ClassList
                         className="Класс B"
@@ -1359,11 +1515,11 @@ export default function InputPage() {
                     />
                     <ClassList
                         className="Класс M"
-                        fieldsByGroup={mFieldsByGroup}
+                        fieldsByGroup={inputMode === 'totals' ? mFieldsByGroupTotals : mFieldsByGroup}
                         params={paramsMForYear}
                         handleParamChange={handleParamChangeM}
                         metricNames={{}}
-                        groupTitles={mGroupTitles}
+                        groupTitles={inputMode === 'totals' ? totalsModeGroupTitlesM : mGroupTitles}
                     />
                 </div>
 
