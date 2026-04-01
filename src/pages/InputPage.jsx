@@ -1110,7 +1110,7 @@ export default function InputPage() {
             || historyClasses[0]
             || null;
         const items = Array.isArray(selectedClass?.items) ? selectedClass.items : [];
-        const targetIter = _selectedIteration || selectedIteration;
+        const targetIter = selectedIteration;
 
         let results = [];
         if (items.length) {
