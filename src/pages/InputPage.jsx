@@ -778,6 +778,7 @@ export default function InputPage() {
     // ---------------- For History.jsx ----------------
     const [items, setItems] = useState([]);
     const [selectedIteration, setSelectedIteration] = useState(0);
+    const [visibleYears, setVisibleYears] = useState({});
     const [inputMode, setInputMode] = useState(() => localStorage.getItem(STORAGE_KEY_INPUT_MODE) || 'metrics');
 
     useEffect(() => {
@@ -876,7 +877,6 @@ export default function InputPage() {
                 }
 
                 for (const row of data) {
-                    const [visibleYears, setVisibleYears] = useState({});
                     ys.push(row.year);
 
                     map[row.year] = {
