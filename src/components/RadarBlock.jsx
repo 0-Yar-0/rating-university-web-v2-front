@@ -87,7 +87,23 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
         }),
     );
     const maxValue = Math.max(...allValues, 0);
-    const radiusMax = viewMode === 'value' ? Math.max(1, Math.ceil(maxValue)) : 100;
+    
+    // Calculate total scores to link Y-axis to final score
+    const totals = rows
+        .map((r) => {
+            const val = Number(r.sumB) || Number(r.sumA) || Number(r.sumM) || 0;
+            return val;
+        })
+        .filter((value) => Number.isFinite(value));
+    const maxTotal = totals.length ? Math.max(...totals, 0) : 100;
+    
+    // Set radiusMax based on both metric max and total score max
+    let radiusMax;
+    if (viewMode === 'value') {
+        radiusMax = Math.max(1, Math.ceil(Math.max(maxValue, maxTotal)));
+    } else {
+        radiusMax = 100;
+    }
 
     const COLORS = ['#2563EB', '#22C55E', '#F97316', '#E11D48', '#0EA5E9', '#A855F7'];
 
@@ -98,11 +114,11 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
                     data={data}
                     outerRadius="80%"
                 >
-                    <PolarGrid radialLines={8} />
+                    <PolarGrid radialLines={12} />
                     <PolarAngleAxis dataKey="metric" />
                     <PolarRadiusAxis
                         domain={[0, radiusMax]}
-                        tickFormatter={(value) => (viewMode === 'value' ? value : `${value}%`)}
+                        tickFormatter={(value) => (viewMode === 'value' ? `${Math.round(value)}` : `${value}%`)}
                     />
                     <Tooltip formatter={(value) => (viewMode === 'value' ? value : `${Number(value).toFixed(1)}%`)} />
                     <Legend />
