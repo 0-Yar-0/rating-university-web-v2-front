@@ -123,23 +123,16 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
         }),
     );
     const maxValue = Math.max(...allValues, 0);
-    
-    // Calculate total scores to link Y-axis to final score
-    const totals = rows
-        .map((r) => {
-            const val = Number(r.sumB) || Number(r.sumA) || Number(r.sumM) || 0;
-            return val;
-        })
-        .filter((value) => Number.isFinite(value));
-    const maxTotal = totals.length ? Math.max(...totals, 0) : 100;
-    
-    // Set radiusMax based on both metric max and total score max
-    let radiusMax;
-    if (viewMode === 'value') {
-        radiusMax = Math.max(1, Math.ceil(Math.max(maxValue, maxTotal)));
-    } else {
-        radiusMax = 100;
-    }
+
+    const metricsConfiguredMax = Math.max(
+        ...metrics.map((m) => Number(resolveMetricMax(rows, m.key)) || 0),
+        1,
+    );
+
+    // In value mode scale by metric bounds, not total score, otherwise radar becomes tiny.
+    const radiusMax = viewMode === 'value'
+        ? Math.max(1, Math.ceil(Math.max(maxValue, metricsConfiguredMax)))
+        : 100;
 
     const COLORS = ['#2563EB', '#22C55E', '#F97316', '#E11D48', '#0EA5E9', '#A855F7'];
 
