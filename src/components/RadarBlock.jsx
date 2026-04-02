@@ -143,7 +143,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
                     data={data}
                     outerRadius="80%"
                 >
-                    <PolarGrid radialLines={1} />
+                    <PolarGrid radialLines={12} />
                     <PolarAngleAxis dataKey="metric" />
                     <PolarRadiusAxis
                         domain={[0, radiusMax]}
