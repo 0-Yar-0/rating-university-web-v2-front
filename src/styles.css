@@ -1335,6 +1335,7 @@ main {
 /* Таблица */
 .results-table {
     width: 100%;
+    min-width: max-content;
     border-collapse: collapse;
     font-size: 0.9rem;
     color: var(--text);
