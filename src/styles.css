@@ -321,6 +321,13 @@ main {
     display: none;
 }
 
+.logo-home-btn {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+}
+
 .app-v2 .top-bar-right {
     gap: 29px;
 }
