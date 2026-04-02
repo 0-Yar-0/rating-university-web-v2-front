@@ -739,36 +739,10 @@ export default function InputPage() {
         localStorage.setItem(STORAGE_KEY_INPUT_MODE, inputMode);
     }, [inputMode]);
 
-    // ---------------- 1. Загрузка на старте ----------------
+    // ---------------- 1. Загрузка на старте (только один раз) ----------------
     useEffect(() => {
-        let _isFromStorageFilled = false;
         const _selectedIteration = +localStorage.getItem(STORAGE_KEY_ITERATION) || 0;
         setSelectedIteration(_selectedIteration)
-
-        // const raw = localStorage.setItem(STORAGE_KEY_ITERATION, );
-
-        // localStorage.clear()
-        // try {
-        //     const raw = localStorage.getItem(STORAGE_KEY);
-        //     if (raw) {
-        //         const saved = JSON.parse(raw);
-        //         if (
-        //             saved &&
-        //             Array.isArray(saved.years) &&
-        //             saved.years.length > 0 &&
-        //             typeof saved.currentYear === 'number' &&
-        //             typeof saved.paramsB === 'object'
-        //             setParamsB(saved.paramsB);
-
-        //             setIsFromStorageFilled(true);
-        //             _isFromStorageFilled = true;
-        //         }
-        //     }
-        // } catch (e) {
-        //     console.warn('Ошибка чтения состояния из localStorage', e);
-        // }
-
-        // if (_isFromStorageFilled) return;
 
         const paramsRequest = _selectedIteration
             ? Api.getParamsBByIter(_selectedIteration)
@@ -1107,7 +1081,7 @@ export default function InputPage() {
                 console.warn('Ошибка загрузки истории:', err);
                 setHistoryClasses([]);
             })
-    }, [selectedIteration]);
+    }, []);
 
     useEffect(() => {
         const selectedClass = historyClasses.find((c) => c.classType === selectedAnalyticsClass)
