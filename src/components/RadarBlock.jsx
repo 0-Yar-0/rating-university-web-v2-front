@@ -143,10 +143,11 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
                     data={data}
                     outerRadius="80%"
                 >
-                    <PolarGrid radialLines={12} />
+                    <PolarGrid radialLines={true} />
                     <PolarAngleAxis dataKey="metric" />
                     <PolarRadiusAxis
                         domain={[0, radiusMax]}
+                        tickCount={9}
                         tickFormatter={(value) => (viewMode === 'value' ? `${Math.round(value)}` : `${value}%`)}
                     />
                     <Tooltip formatter={(value) => (viewMode === 'value' ? value : `${Number(value).toFixed(1)}%`)} />
