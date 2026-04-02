@@ -2100,21 +2100,6 @@ export default function InputPage() {
                 visibleYears={visibleYears}
                 onToggleYear={handleToggleYear}
             />
-            <section className="input-v2-hero card">
-                <div className="hero-panel hero-brand-panel">
-                    <img src="ystu_logo1.svg" alt="ЯГТУ" />
-                    <div>
-                        <h3>Панель расчета рейтинга</h3>
-                        <p>Единый ввод параметров для классов A, B и M с быстрым переходом к истории.</p>
-                    </div>
-                </div>
-                <div className="hero-panel hero-note-panel">
-                    <h4>Состояние сессии</h4>
-                    <p>Год: <strong>{currentYear}</strong></p>
-                    <p>Итерация: <strong>{selectedIteration || 'новая'}</strong></p>
-                    <p>Режим: <strong>{inputMode === 'metrics' ? 'Через метрики' : 'Через итоговые значения параметров'}</strong></p>
-                </div>
-            </section>
 
             <div className="card big-card input-v2-card">
                 <div className="card-header-row">
