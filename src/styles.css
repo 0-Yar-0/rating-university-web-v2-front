@@ -483,7 +483,7 @@ main {
 
 .input-metrics-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 134px;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, auto);
     gap: 22px;
     align-items: start;
 }
@@ -503,6 +503,7 @@ main {
 
 .metrics-side-table .results-table {
     font-size: 10px;
+    min-width: max-content;
 }
 
 .metrics-side-table .results-table-header,
