@@ -32,11 +32,12 @@ export default function LineGraphBlock({ rows, classType = 'B' }) {
         total: resolveTotalValue(r, classType),
     }));
 
+    // Calculate Y-axis domain based on total scores
     const totals = data
         .map((point) => Number(point.total))
         .filter((value) => Number.isFinite(value));
     const minTotal = totals.length ? Math.min(...totals) : 0;
-    const maxTotal = totals.length ? Math.max(...totals) : 0;
+    const maxTotal = totals.length ? Math.max(...totals) : 100;
     const span = maxTotal - minTotal;
     const pad = span > 0 ? span * 0.1 : Math.max(1, Math.abs(minTotal) * 0.05);
     const yDomain = [minTotal - pad, maxTotal + pad];
@@ -47,7 +48,7 @@ export default function LineGraphBlock({ rows, classType = 'B' }) {
                 <LineChart data={data} margin={{ top: 20, right: 40, left: 0, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" />
-                    <YAxis domain={yDomain} hide={true} />
+                    <YAxis domain={yDomain} />
                     <Tooltip />
                     <Line type="monotone" dataKey="total" stroke="#82ca9d" dot />
                 </LineChart>
