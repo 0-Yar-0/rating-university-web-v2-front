@@ -17,6 +17,7 @@ export default function ResultsTable({
     allowMetricNameEditing = true,
     classType = 'B',
 }) {
+    const safeRows = Array.isArray(rows) ? rows : [];
     const [editingKey, setEditingKey] = useState(null);
     const [editValue, setEditValue] = useState('');
 
@@ -101,7 +102,7 @@ export default function ResultsTable({
                 <thead>
                     <tr>
                         <th className="results-table-header">Показатель</th>
-                        {rows.map((r) => (
+                        {safeRows.map((r) => (
                             <th className="results-table-header" key={`${r.year}-${r.iteration}-year`}>
                                 {r.year}
                             </th>
@@ -112,7 +113,7 @@ export default function ResultsTable({
                     {metricKeys.map((metricKey) => (
                         <tr key={metricKey} className="results-table-row">
                             {renderMetricTitleCell(metricKey)}
-                            {rows.map((r) => (
+                            {safeRows.map((r) => (
                                 <td key={`${r.year}-${r.iteration}-${metricKey}`} className="results-table-cell">
                                     {formatNumber(r[metricKey])}
                                 </td>
@@ -122,7 +123,7 @@ export default function ResultsTable({
 
                     <tr className="results-table-row">
                         <th className="results-table-header">Сумма баллов</th>
-                        {rows.map((r) => (
+                        {safeRows.map((r) => (
                             <td key={`${r.year}-${r.iteration}-total`} className="results-table-cell">
                                 {formatNumber(resolveTotalValue(r))}
                             </td>
@@ -131,7 +132,7 @@ export default function ResultsTable({
 
                     <tr className="results-table-row">
                         <th className="results-table-header">Показать на графиках</th>
-                        {rows.map((r) => (
+                        {safeRows.map((r) => (
                             <td key={`${r.year}-${r.iteration}-visible`} className="results-table-cell" style={{ textAlign: 'center' }}>
                                 <input
                                     type="checkbox"
