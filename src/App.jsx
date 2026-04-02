@@ -43,7 +43,7 @@ function AppShell({ children }) {
         <div className="app-root app-v2">
             <header className="top-bar">
                 <button className="top-bar-left display-flex logo-home-btn" type="button" onClick={handleHomeClick}>
-                    <img src='ystu_logo.svg' className="logo-img" alt="На главную" />
+                    <img src='ystu_logo1.svg' className="logo-img" alt="На главную" />
                     <span className="logo-text">Рейтинг <br/> ЯГТУ</span>
                 </button>
                 {user && (

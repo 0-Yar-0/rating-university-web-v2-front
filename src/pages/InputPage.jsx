@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Api } from '../api';
 import YearPicker from '../components/YearPicker.jsx';
 import ClassList from '../components/ClassList.jsx';
+import ResultsTable from '../components/ResultsTable.jsx';
 import Analytics from './Analytics.jsx';
 import History from './History.jsx';
 import MenuDropdown from '../components/MenuDropdown.jsx';
@@ -12,6 +13,46 @@ const B25_B26_START_YEAR = 2022;
 const STORAGE_KEY = 'unirating_b_params_v2';
 const STORAGE_KEY_ITERATION = 'selected_iteration';
 const STORAGE_KEY_INPUT_MODE = 'b_input_mode';
+
+const METRIC_EXCLUDE_KEYS = new Set([
+    'year',
+    'iteration',
+    'calcResultId',
+    'classType',
+    'sumA',
+    'sumB',
+    'sumM',
+    'TOTAL',
+    'A_TOTAL',
+    'B_TOTAL',
+    'M_TOTAL',
+    'A_TOTAL_WITH_KI',
+    'B_TOTAL_WITH_KI',
+    'M_TOTAL_WITH_KI',
+    'KI',
+    'KI_A',
+    'KI_B',
+    'KI_M',
+]);
+
+const CLASS_SPECIFIC_EXCLUDE_KEYS = {
+    A: new Set(['PN', 'DI', 'SUMPOINTS', 'sumPoints']),
+};
+
+const resolveMetricKeys = (rows, classType = 'B') => {
+    if (!rows.length) {
+        return [];
+    }
+
+    const classSpecificExcludes = CLASS_SPECIFIC_EXCLUDE_KEYS[classType] || new Set();
+
+    return Object.keys(rows[0]).filter((key) => {
+        if (key.startsWith('code')) return false;
+        if (METRIC_EXCLUDE_KEYS.has(key)) return false;
+        if (classSpecificExcludes.has(key)) return false;
+        return typeof rows[0][key] === 'number' && Number.isFinite(rows[0][key]);
+    });
+};
 
 const DEFAULT_B_PARAMS = {
     ENa: '',
@@ -835,6 +876,7 @@ export default function InputPage() {
                 }
 
                 for (const row of data) {
+                    const [visibleYears, setVisibleYears] = useState({});
                     ys.push(row.year);
 
                     map[row.year] = {
@@ -1122,6 +1164,16 @@ export default function InputPage() {
         setRows(results);
         setItems(items);
     }, [historyClasses, selectedAnalyticsClass, selectedIteration]);
+
+    useEffect(() => {
+        setVisibleYears((prev) => {
+            const next = {};
+            rows.forEach((r) => {
+                next[r.year] = prev[r.year] ?? true;
+            });
+            return next;
+        });
+    }, [rows]);
 
     // ---------------- 2. Автосохранение ----------------
     useEffect(() => {
@@ -2006,19 +2058,49 @@ export default function InputPage() {
         18: [['OD2022', 'OD2022'], ['OD2023', 'OD2023'], ['OD2024', 'OD2024'], ['NO2022', 'NO2022'], ['NV2022', 'NV2022'], ['NZ2022', 'NZ2022'], ['NOA2022', 'NOA2022'], ['NO2023', 'NO2023'], ['NV2023', 'NV2023'], ['NZ2023', 'NZ2023'], ['NOA2023', 'NOA2023'], ['NO2024', 'NO2024'], ['NV2024', 'NV2024'], ['NZ2024', 'NZ2024'], ['NOA2024', 'NOA2024']],
     };
 
+    const metricKeys = resolveMetricKeys(rows, selectedAnalyticsClass);
+
+    const handleToggleYear = (year) => {
+        setVisibleYears((prev) => ({
+            ...prev,
+            [year]: !prev[year],
+        }));
+    };
+
+    const handleMetricNamesChange = (patch) => {
+        setMetricNames((prev) => {
+            const next = { ...prev, ...patch };
+            const first = rows[0];
+
+            if (first && first.calcResultId) {
+                const dto = { calcResultId: first.calcResultId };
+                Object.keys(next).forEach((k) => {
+                    if (k.startsWith('codeB')) {
+                        dto[k] = next[k];
+                    }
+                });
+                Api.updateMetricNames(dto).catch((e) => console.warn('Ошибка сохранения имён метрик', e));
+            }
+
+            return next;
+        });
+    };
+
     return (
         <div className="input-v2-layout">
             <Analytics
                 rows={rows}
                 metricNames={metricNames}
-                setMetricNames={setMetricNames}
                 classType={selectedAnalyticsClass}
                 availableClassTypes={historyClasses.map((item) => item.classType)}
                 onClassTypeChange={setSelectedAnalyticsClass}
+                metricKeys={metricKeys}
+                visibleYears={visibleYears}
+                onToggleYear={handleToggleYear}
             />
             <section className="input-v2-hero card">
                 <div className="hero-panel hero-brand-panel">
-                    <img src="ystu_logo.svg" alt="ЯГТУ" />
+                    <img src="ystu_logo1.svg" alt="ЯГТУ" />
                     <div>
                         <h3>Панель расчета рейтинга</h3>
                         <p>Единый ввод параметров для классов A, B и M с быстрым переходом к истории.</p>
@@ -2090,31 +2172,46 @@ export default function InputPage() {
                     </div>
                 )}
 
-                <div className="input-grid">
-                    <ClassList
-                        className="Класс A"
-                        fieldsByGroup={inputMode === 'totals' ? aFieldsByGroupTotals : aFieldsByGroup}
-                        params={paramsAForYear}
-                        handleParamChange={handleParamChangeA}
-                        metricNames={{}}
-                        groupTitles={inputMode === 'totals' ? totalsModeGroupTitlesA : aGroupTitles}
-                    />
-                    <ClassList
-                        className="Класс B"
-                        fieldsByGroup={fieldsByGroup}
-                        params={params}
-                        handleParamChange={handleParamChangeB}
-                        metricNames={metricNames}
-                        groupTitles={inputMode === 'totals' ? totalsModeGroupTitles : metricModeGroupTitles}
-                    />
-                    <ClassList
-                        className="Класс M"
-                        fieldsByGroup={inputMode === 'totals' ? mFieldsByGroupTotals : mFieldsByGroup}
-                        params={paramsMForYear}
-                        handleParamChange={handleParamChangeM}
-                        metricNames={{}}
-                        groupTitles={inputMode === 'totals' ? totalsModeGroupTitlesM : mGroupTitles}
-                    />
+                <div className="input-metrics-layout">
+                    <div className="input-grid">
+                        <ClassList
+                            className="Класс A"
+                            fieldsByGroup={inputMode === 'totals' ? aFieldsByGroupTotals : aFieldsByGroup}
+                            params={paramsAForYear}
+                            handleParamChange={handleParamChangeA}
+                            metricNames={{}}
+                            groupTitles={inputMode === 'totals' ? totalsModeGroupTitlesA : aGroupTitles}
+                        />
+                        <ClassList
+                            className="Класс B"
+                            fieldsByGroup={fieldsByGroup}
+                            params={params}
+                            handleParamChange={handleParamChangeB}
+                            metricNames={metricNames}
+                            groupTitles={inputMode === 'totals' ? totalsModeGroupTitles : metricModeGroupTitles}
+                        />
+                        <ClassList
+                            className="Класс M"
+                            fieldsByGroup={inputMode === 'totals' ? mFieldsByGroupTotals : mFieldsByGroup}
+                            params={paramsMForYear}
+                            handleParamChange={handleParamChangeM}
+                            metricNames={{}}
+                            groupTitles={inputMode === 'totals' ? totalsModeGroupTitlesM : mGroupTitles}
+                        />
+                    </div>
+
+                    <aside className="metrics-side-table">
+                        <ResultsTable
+                            rows={rows}
+                            metricNames={metricNames}
+                            metricKeys={metricKeys}
+                            onMetricNamesChange={handleMetricNamesChange}
+                            visibleYears={visibleYears}
+                            onToggleYear={handleToggleYear}
+                            allowMetricNameEditing={selectedAnalyticsClass === 'B'}
+                            classType={selectedAnalyticsClass}
+                        />
+                    </aside>
                 </div>
 
                 <div className="card-footer">
