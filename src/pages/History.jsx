@@ -30,7 +30,7 @@ const resolveMetricKeys = (row) => Object.keys(row || {}).filter((key) => {
     return typeof row[key] === 'number' && Number.isFinite(row[key]);
 });
 
-export default function History({ items, setRows, selectedIteration, setSelectedIteration, classType = 'B' }) {
+export default function History({ items, setRows, selectedIteration, setSelectedIteration, classType = 'B', maxItems = null }) {
     // Удаление всей истории (как ты уже делал через Api.clearHistory)
     const handleClearHistory = async () => {
         if (!window.confirm('Точно удалить всю историю расчётов?')) return;
@@ -48,7 +48,10 @@ export default function History({ items, setRows, selectedIteration, setSelected
         localStorage.setItem(STORAGE_KEY_ITERATION, String(iter));
     };
 
-    if (!items.length) {
+    const sortedItems = [...(items || [])].sort((a, b) => b.iter - a.iter);
+    const visibleItems = Number.isFinite(maxItems) ? sortedItems.slice(0, Math.max(0, maxItems)) : sortedItems;
+
+    if (!visibleItems.length) {
         return (
             <div className="card">
                 <h2>Сохранённые сессии</h2>
@@ -64,7 +67,7 @@ export default function History({ items, setRows, selectedIteration, setSelected
             </div>
 
             <div className="history-list">
-                {items.sort((a, b) => b.iter - a.iter).map((it) => (
+                {visibleItems.map((it) => (
                     <div key={it.iter} className={`history-item ${it.iter === selectedIteration ? "selected" : ""}`} onClick={handleOpenIteration(it.iter)}>
                         <div className="history-main">
                             <span className="history-title">Расчёт #{it.iter}</span>

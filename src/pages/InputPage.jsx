@@ -565,10 +565,14 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
                 + 0.25 * (normalizeNumber(firstDefinedValue(p.M23_PPPv)) ?? 0)
                 + 0.1 * (normalizeNumber(firstDefinedValue(p.M23_PPPz)) ?? 0);
             const noa = normalizeNumber(firstDefinedValue(p.M23_NOA)) ?? 0;
-            const m23O = safeDivOrZero(0.25 * pkp + ppp, np + noa);
+            const m23Numerator = 0.25 * pkp + ppp;
+            const m23Denominator = np + noa;
+            const m23O = m23Denominator === 0 && m23Numerator > 0
+                ? 1
+                : safeDivOrZero(m23Numerator, m23Denominator);
             const m24O = safeDivOrZero(
                 normalizeNumber(firstDefinedValue(p.M24_NAP, p.M24_o)) ?? 0,
-                normalizeNumber(firstDefinedValue(p.M24_PN, p.M22_NMo)) ?? 0,
+                normalizeNumber(firstDefinedValue(p.M24_PN, p.PN)) ?? 0,
             );
 
             return {
@@ -2003,7 +2007,7 @@ export default function InputPage() {
     };
 
     return (
-        <>
+        <div className="input-v2-layout">
             <Analytics
                 rows={rows}
                 metricNames={metricNames}
@@ -2012,7 +2016,23 @@ export default function InputPage() {
                 availableClassTypes={historyClasses.map((item) => item.classType)}
                 onClassTypeChange={setSelectedAnalyticsClass}
             />
-            <div className="card big-card">
+            <section className="input-v2-hero card">
+                <div className="hero-panel hero-brand-panel">
+                    <img src="ystu_logo.svg" alt="ЯГТУ" />
+                    <div>
+                        <h3>Панель расчета рейтинга</h3>
+                        <p>Единый ввод параметров для классов A, B и M с быстрым переходом к истории.</p>
+                    </div>
+                </div>
+                <div className="hero-panel hero-note-panel">
+                    <h4>Состояние сессии</h4>
+                    <p>Год: <strong>{currentYear}</strong></p>
+                    <p>Итерация: <strong>{selectedIteration || 'новая'}</strong></p>
+                    <p>Режим: <strong>{inputMode === 'metrics' ? 'Через метрики' : 'Через итоговые значения параметров'}</strong></p>
+                </div>
+            </section>
+
+            <div className="card big-card input-v2-card">
                 <div className="card-header-row">
                     <div className="left-header">
                         <YearPicker
@@ -2044,13 +2064,12 @@ export default function InputPage() {
                     </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div className="input-mode-row">
                     <span>Режим ввода:</span>
                     <select
                         className="num-input"
                         value={inputMode}
                         onChange={(e) => setInputMode(e.target.value)}
-                        style={{ maxWidth: 360 }}
                     >
                         <option value="metrics">Через метрики</option>
                         <option value="totals">Через итоговые значения параметров</option>
@@ -2115,13 +2134,15 @@ export default function InputPage() {
                 </div>
                 <ToastContainer position="bottom-right" />
             </div>
+            <div id="history-section" />
             <History
                 items={items}
                 setRows={setRows}
                 selectedIteration={selectedIteration}
                 setSelectedIteration={setSelectedIteration}
                 classType={selectedAnalyticsClass}
+                maxItems={5}
             />
-        </>
+        </div>
     );
 }
