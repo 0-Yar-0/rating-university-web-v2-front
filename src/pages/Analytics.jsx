@@ -14,8 +14,9 @@ export default function AnalyticsPage({
     onToggleYear,
 }) {
     const [radarViewMode, setRadarViewMode] = useState('percent');
+    const safeRows = Array.isArray(rows) ? rows : [];
 
-    if (!rows.length) {
+    if (!safeRows.length) {
         return (
             <div className="card big-card">
                 <h2>Аналитика</h2>
@@ -25,7 +26,7 @@ export default function AnalyticsPage({
     }
 
     // строки, которые реально показываем в графиках
-    const activeRows = rows.filter((r) => visibleYears[r.year]);
+    const activeRows = safeRows.filter((r) => visibleYears[r.year]);
     const classOptions = Array.from(new Set(availableClassTypes.length ? availableClassTypes : ['A', 'B', 'M']));
 
     return (

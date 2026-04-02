@@ -1147,7 +1147,7 @@ export default function InputPage() {
             const selectedItem = targetIter
                 ? items.find((item) => item.iter === targetIter)
                 : items.reduce((maxItem, item) => (item.iter > maxItem.iter ? item : maxItem));
-            results = selectedItem?.results || [];
+            results = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
 
             const firstRes = results[0] || {};
             const newNames = {};
@@ -1161,14 +1161,16 @@ export default function InputPage() {
             setMetricNames({});
         }
 
-        setRows(results);
+        setRows(Array.isArray(results) ? results : []);
         setItems(items);
     }, [historyClasses, selectedAnalyticsClass, selectedIteration]);
 
     useEffect(() => {
         setVisibleYears((prev) => {
             const next = {};
-            rows.forEach((r) => {
+            const safeRows = Array.isArray(rows) ? rows : [];
+
+            safeRows.forEach((r) => {
                 next[r.year] = prev[r.year] ?? true;
             });
             return next;
