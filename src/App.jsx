@@ -1,7 +1,8 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
-import { Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Api } from './api';
 import InputPage from './pages/InputPage.jsx';
+import HistoryPage from './pages/HistoryPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import ClipLoader from 'react-spinners/ClipLoader';
@@ -12,6 +13,7 @@ export const useAuth = () => useContext(AuthContext);
 function AppShell({ children }) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleLogout = async () => {
         try {
@@ -22,25 +24,28 @@ function AppShell({ children }) {
         }
     };
 
+    const handleHistoryClick = () => {
+        if (location.pathname !== '/history') {
+            navigate('/history');
+        }
+    };
+
     return (
-        <div className="app-root">
+        <div className="app-root app-v2">
             <header className="top-bar">
                 <div className="top-bar-left display-flex">
                     <img src='ystu_logo.svg' className="logo-img"></img>
                     <span className="logo-text">Рейтинг <br/> ЯГТУ</span>
-                    {/* {user && (
-                        <nav className="top-nav">
-                            <Link to="/input" className="top-nav-link">
-                                Ввод параметров
-                            </Link>
-                        </nav>
-                    )} */}
                 </div>
                 {user && (
                     <div className="top-bar-right">
-                        <span className="user-name">{user.name}</span>
-                        <button className="icon-btn" onClick={handleLogout} title="Выйти">
-                            <img src="logout.svg"></img>
+                        <button className="header-pill history-pill" onClick={handleHistoryClick} title="История">
+                            <span className="header-pill-icon">↻</span>
+                            <span>История</span>
+                        </button>
+                        <button className="header-pill logout-pill" onClick={handleLogout} title="Выйти">
+                            <img src="logout.svg" alt="Выйти" />
+                            <span>Выйти</span>
                         </button>
                     </div>
                 )}
@@ -109,6 +114,15 @@ export default function App() {
                         element={
                             <PrivateRoute>
                                 <InputPage />
+                            </PrivateRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/history"
+                        element={
+                            <PrivateRoute>
+                                <HistoryPage />
                             </PrivateRoute>
                         }
                     />
