@@ -43,7 +43,7 @@ export default function ResultsTable({
     const editableMetrics = allowMetricNameEditing ? metricKeys.slice() : [];
 
     const renderHeaderCell = (key, label) => (
-        <th className="results-table-header">
+        <th className="results-table-header" key={key}>
             {editingKey === key ? (
                 <input
                     className="metric-edit-input"
@@ -84,48 +84,63 @@ export default function ResultsTable({
         return null;
     };
 
+    const renderMetricTitleCell = (metricKey) => {
+        const nameKey = `code${metricKey.toUpperCase()}`;
+        const label = metricNames[nameKey] || metricKey.toUpperCase();
+
+        if (editableMetrics.includes(metricKey)) {
+            return renderHeaderCell(nameKey, label);
+        }
+
+        return <th className="results-table-header" key={nameKey}>{label}</th>;
+    };
+
     return (
         <div className="card results-table-wrapper">
             <table className="results-table">
                 <thead>
                     <tr>
-                        <th className="results-table-header">Год</th>
-                        {metricKeys.map((k) => {
-                            const label = metricNames[`code${k.toUpperCase()}`] || k.toUpperCase();
-                            if (editableMetrics.includes(k)) {
-                                const nameKey = `code${k.toUpperCase()}`;
-                                return renderHeaderCell(nameKey, label);
-                            }
-
-                            return (
-                                <th className="results-table-header" key={k}>
-                                    {label}
-                                </th>
-                            );
-                        })}
-                        <th className="results-table-header">Сумма баллов</th>
-                        <th className="results-table-header">Показать</th>
+                        <th className="results-table-header">Показатель</th>
+                        {rows.map((r) => (
+                            <th className="results-table-header" key={`${r.year}-${r.iteration}-year`}>
+                                {r.year}
+                            </th>
+                        ))}
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((r) => (
-                        <tr key={`${r.year}-${r.iteration}`} className="results-table-row">
-                            <td className="results-table-cell">{r.year}</td>
-                            {metricKeys.map((k) => (
-                                <td key={k} className="results-table-cell">
-                                    {formatNumber(r[k])}
+                    {metricKeys.map((metricKey) => (
+                        <tr key={metricKey} className="results-table-row">
+                            {renderMetricTitleCell(metricKey)}
+                            {rows.map((r) => (
+                                <td key={`${r.year}-${r.iteration}-${metricKey}`} className="results-table-cell">
+                                    {formatNumber(r[metricKey])}
                                 </td>
                             ))}
-                            <td className="results-table-cell">{formatNumber(resolveTotalValue(r))}</td>
-                            <td className="results-table-cell" style={{ textAlign: 'center' }}>
+                        </tr>
+                    ))}
+
+                    <tr className="results-table-row">
+                        <th className="results-table-header">Сумма баллов</th>
+                        {rows.map((r) => (
+                            <td key={`${r.year}-${r.iteration}-total`} className="results-table-cell">
+                                {formatNumber(resolveTotalValue(r))}
+                            </td>
+                        ))}
+                    </tr>
+
+                    <tr className="results-table-row">
+                        <th className="results-table-header">Показать на графиках</th>
+                        {rows.map((r) => (
+                            <td key={`${r.year}-${r.iteration}-visible`} className="results-table-cell" style={{ textAlign: 'center' }}>
                                 <input
                                     type="checkbox"
                                     checked={!!visibleYears[r.year]}
                                     onChange={() => onToggleYear(r.year)}
                                 />
                             </td>
-                        </tr>
-                    ))}
+                        ))}
+                    </tr>
                 </tbody>
             </table>
         </div>
