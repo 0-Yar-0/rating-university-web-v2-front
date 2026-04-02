@@ -30,13 +30,22 @@ function AppShell({ children }) {
         }
     };
 
+    const handleHomeClick = () => {
+        if (location.pathname !== '/input') {
+            navigate('/input');
+            return;
+        }
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     return (
         <div className="app-root app-v2">
             <header className="top-bar">
-                <div className="top-bar-left display-flex">
-                    <img src='ystu_logo.svg' className="logo-img"></img>
+                <button className="top-bar-left display-flex logo-home-btn" type="button" onClick={handleHomeClick}>
+                    <img src='ystu_logo.svg' className="logo-img" alt="На главную" />
                     <span className="logo-text">Рейтинг <br/> ЯГТУ</span>
-                </div>
+                </button>
                 {user && (
                     <div className="top-bar-right">
                         <button className="header-pill history-pill" onClick={handleHistoryClick} title="История">
