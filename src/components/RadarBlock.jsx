@@ -11,6 +11,17 @@ import {
 } from 'recharts';
 
 const METRIC_MAX = {
+    a11: 5,
+    a21: 25,
+    a22: 25,
+    a23: 1,
+    a31: 8,
+    a32: 8,
+    a33: 4,
+    a34: 4,
+    a35: 8,
+    a36: 8,
+    a37: 2,
     b11: 23,
     b12: 3,
     b13: 4,
@@ -28,6 +39,24 @@ const METRIC_MAX = {
     b42: 5,
     b43: 5,
     b44: 5,
+    m11: 10,
+    m12: 5,
+    m13: 5,
+    m14: 5,
+    m21: 2,
+    m22: 6,
+    m23: 6,
+    m24: 6,
+    m25: 1,
+    m26: 1,
+    m27: 1,
+    m31: 20,
+    m32: 5,
+    m33: 2,
+    m41: 8,
+    m42: 8,
+    m43: 7,
+    m44: 7,
 };
 
 const getObservedMetricMax = (rows, key) => {
@@ -35,6 +64,17 @@ const getObservedMetricMax = (rows, key) => {
         .map((row) => Number(row?.[key]))
         .filter((value) => Number.isFinite(value));
     return values.length ? Math.max(...values, 0) : 0;
+};
+
+const resolveMetricMax = (rows, key) => {
+    const normalizedKey = String(key || '').toLowerCase();
+    const configuredMax = METRIC_MAX[normalizedKey];
+    if (Number.isFinite(configuredMax)) {
+        return configuredMax;
+    }
+
+    const observedMax = getObservedMetricMax(rows, key);
+    return observedMax > 0 ? observedMax : 1;
 };
 
 /**
@@ -60,8 +100,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
     // [{ metric: 'B11', y_2024: ..., y_2025: ... }, ...]
     const data = metrics.map((m) => {
         const row = { metric: m.label };
-        const observedMax = getObservedMetricMax(rows, m.key);
-        const metricMax = METRIC_MAX[m.key] ?? (observedMax > 0 ? observedMax : 1);
+        const metricMax = resolveMetricMax(rows, m.key);
         rows.forEach((r) => {
             const rawValue = Number(r[m.key]) || 0;
             if (viewMode === 'value') {
@@ -79,10 +118,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
             const value = Number(r[m.key]);
             if (!Number.isFinite(value)) return 0;
             if (viewMode === 'value') return value;
-            const metricMax = METRIC_MAX[m.key] ?? (() => {
-                const observedMax = getObservedMetricMax(rows, m.key);
-                return observedMax > 0 ? observedMax : 1;
-            })();
+            const metricMax = resolveMetricMax(rows, m.key);
             return metricMax > 0 ? (value / metricMax) * 100 : 0;
         }),
     );
@@ -114,7 +150,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
                     data={data}
                     outerRadius="80%"
                 >
-                    <PolarGrid radialLines={12} />
+                    <PolarGrid radialLines={1} />
                     <PolarAngleAxis dataKey="metric" />
                     <PolarRadiusAxis
                         domain={[0, radiusMax]}
