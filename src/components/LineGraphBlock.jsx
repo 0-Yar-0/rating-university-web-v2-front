@@ -48,7 +48,7 @@ export default function LineGraphBlock({ rows, classType = 'B' }) {
                 <LineChart data={data} margin={{ top: 20, right: 40, left: 0, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="year" />
-                    <YAxis domain={yDomain} />
+                    <YAxis type="integer" domain={yDomain} />
                     <Tooltip />
                     <Line type="monotone" dataKey="total" stroke="#82ca9d" dot />
                 </LineChart>
