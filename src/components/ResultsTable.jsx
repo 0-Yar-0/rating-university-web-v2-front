@@ -15,6 +15,7 @@ export default function ResultsTable({
     onMetricNamesChange,
     visibleYears,
     onToggleYear,
+    allowMetricNameEditing = false,
     classType = 'B',
 }) {
     const safeRows = Array.isArray(rows) ? rows : [];
@@ -40,6 +41,8 @@ export default function ResultsTable({
         setEditingKey(null);
         setEditValue('');
     };
+
+    const editableMetrics = allowMetricNameEditing ? metricKeys.slice() : [];
 
     const renderHeaderCell = (key, label) => (
         <th className="results-table-header" key={key}>

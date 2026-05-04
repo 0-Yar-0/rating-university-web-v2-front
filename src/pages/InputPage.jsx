@@ -2254,9 +2254,10 @@ export default function InputPage() {
                             rows={rows}
                             metricNames={metricNames}
                             metricKeys={metricKeys}
-                            onMetricNamesChange={handleMetricNamesChange}
+                            onMetricNamesChange={false}
                             visibleYears={visibleYears}
                             onToggleYear={handleToggleYear}
+                            allowMetricNameEditing={false}
                             classType={selectedAnalyticsClass}
                         />
                     </aside>
