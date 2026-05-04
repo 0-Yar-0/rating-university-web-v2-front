@@ -1,5 +1,6 @@
 // src/components/ResultsTable.jsx
 import React, { useState } from 'react';
+import { DEFAULT_METRIC_NAMES } from '../constants.js';
 
 const TOTAL_KEY_PRIORITY = {
     A: ['A_TOTAL_WITH_KI', 'A_TOTAL', 'sumA', 'TOTAL'],
@@ -87,7 +88,7 @@ export default function ResultsTable({
 
     const renderMetricTitleCell = (metricKey) => {
         const nameKey = `code${metricKey.toUpperCase()}`;
-        const label = metricNames[nameKey] || metricKey.toUpperCase();
+        const label = metricNames[nameKey] || DEFAULT_METRIC_NAMES[nameKey] || metricKey.toUpperCase();
 
         if (editableMetrics.includes(metricKey)) {
             return renderHeaderCell(nameKey, label);
