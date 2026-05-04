@@ -15,7 +15,7 @@ export default function ResultsTable({
     onMetricNamesChange,
     visibleYears,
     onToggleYear,
-    allowMetricNameEditing = true,
+    allowMetricNameEditing = false,
     classType = 'B',
 }) {
     const safeRows = Array.isArray(rows) ? rows : [];
