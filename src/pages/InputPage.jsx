@@ -2257,7 +2257,7 @@ export default function InputPage() {
                             onMetricNamesChange={handleMetricNamesChange}
                             visibleYears={visibleYears}
                             onToggleYear={handleToggleYear}
-                            allowMetricNameEditing={selectedAnalyticsClass === 'B'}
+                            allowMetricNameEditing={false}
                             classType={selectedAnalyticsClass}
                         />
                     </aside>
