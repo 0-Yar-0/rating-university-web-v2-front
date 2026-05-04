@@ -55,6 +55,45 @@ const resolveMetricKeys = (rows, classType = 'B') => {
     });
 };
 
+const resolveMetricLabel = (codeKey, rawValue) => {
+    const fallback = DEFAULT_METRIC_NAMES[codeKey] || codeKey.toUpperCase();
+    if (typeof rawValue !== 'string') return fallback;
+
+    const value = rawValue.trim();
+    if (!value) return fallback;
+
+    const upperCode = codeKey.toUpperCase();
+    const upperValue = value.toUpperCase();
+    if (upperValue === upperCode || upperValue === `CODE${upperCode}`) {
+        return fallback;
+    }
+
+    return value;
+};
+
+const extractMetricNamesFromResult = (resultRow) => {
+    const names = { ...DEFAULT_METRIC_NAMES };
+    Object.keys(resultRow || {}).forEach((key) => {
+        if (key.startsWith('code')) {
+            names[key] = resolveMetricLabel(key, resultRow[key]);
+        }
+    });
+    return names;
+};
+
+const buildMetricNamesDto = (metricNames, calcResultId) => {
+    if (!calcResultId) return null;
+
+    const dto = { calcResultId };
+    Object.keys(metricNames || {}).forEach((key) => {
+        if (key.startsWith('code')) {
+            dto[key] = metricNames[key];
+        }
+    });
+
+    return dto;
+};
+
 const DEFAULT_B_PARAMS = {
     ENa: '',
     ENb: '',
@@ -774,6 +813,15 @@ export default function InputPage() {
         localStorage.setItem(STORAGE_KEY_INPUT_MODE, inputMode);
     }, [inputMode]);
 
+    const applyHistoryClasses = (classes) => {
+        setHistoryClasses(classes);
+        setSelectedAnalyticsClass((current) => (
+            classes.some((c) => c.classType === current)
+                ? current
+                : (classes[0]?.classType || current)
+        ));
+    };
+
     // ---------------- 1. Загрузка на старте (только один раз) ----------------
     useEffect(() => {
         const _selectedIteration = +localStorage.getItem(STORAGE_KEY_ITERATION) || 0;
@@ -1105,12 +1153,7 @@ export default function InputPage() {
         Api.getHistoryAll()
             .then(object => {
                 const classes = Array.isArray(object?.classes) ? object.classes : [];
-                setHistoryClasses(classes);
-                setSelectedAnalyticsClass((current) => (
-                    classes.some((c) => c.classType === current)
-                        ? current
-                        : (classes[0]?.classType || current)
-                ));
+                applyHistoryClasses(classes);
             })
             .catch((err) => {
                 console.warn('Ошибка загрузки истории:', err);
@@ -1124,7 +1167,7 @@ export default function InputPage() {
         if (!selectedClass) {
             setRows([]);
             setItems([]);
-            setMetricNames({});
+            setMetricNames({ ...DEFAULT_METRIC_NAMES });
             return;
         }
 
@@ -1139,15 +1182,9 @@ export default function InputPage() {
             results = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
 
             const firstRes = results[0] || {};
-            const newNames = {};
-            Object.keys(firstRes).forEach((k) => {
-                if (k.startsWith('code')) {
-                    newNames[k] = firstRes[k] || k.toUpperCase();
-                }
-            });
-            setMetricNames(newNames);
+            setMetricNames(extractMetricNamesFromResult(firstRes));
         } else {
-            setMetricNames({});
+            setMetricNames({ ...DEFAULT_METRIC_NAMES });
         }
 
         setRows(Array.isArray(results) ? results : []);
@@ -1672,9 +1709,10 @@ export default function InputPage() {
             const delay = 500;
             const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
             const object = await Api.calcMulti(payload);
+            const computedClasses = Array.isArray(object?.classes) ? object.classes : [];
 
-            const summary = Array.isArray(object?.classes)
-                ? object.classes.flatMap((block) => {
+            const summary = computedClasses
+                ? computedClasses.flatMap((block) => {
                     const firstRow = Array.isArray(block?.data) ? block.data[0] : null;
                     if (!firstRow) {
                         return [];
@@ -1694,14 +1732,42 @@ export default function InputPage() {
                 : [];
             setCalcSummary(summary);
 
-            const iteration = object.classes.filter(c => c.classType === "B")[0].data[0].iteration
-            setSelectedIteration(iteration);
-            localStorage.setItem(STORAGE_KEY_ITERATION, String(iteration)),
+            const bClass = computedClasses.find((c) => c.classType === 'B');
+            const bFirstRow = Array.isArray(bClass?.data) ? bClass.data[0] : null;
+            const iteration = Number(bFirstRow?.iteration) || 0;
+            if (iteration) {
+                setSelectedIteration(iteration);
+                localStorage.setItem(STORAGE_KEY_ITERATION, String(iteration));
+            }
 
-                toast.success('Расчёт выполнен',
-                    {
-                        autoClose: delay
-                    });
+            const metricNamesDto = buildMetricNamesDto(metricNames, bFirstRow?.calcResultId);
+            if (metricNamesDto) {
+                try {
+                    await Api.updateMetricNames(metricNamesDto);
+                } catch (e) {
+                    console.warn('Ошибка сохранения пользовательских имён после расчёта', e);
+                }
+            }
+
+            try {
+                const historyObject = await Api.getHistoryAll();
+                const classes = Array.isArray(historyObject?.classes) ? historyObject.classes : [];
+                applyHistoryClasses(classes);
+            } catch (e) {
+                console.warn('Ошибка обновления истории после расчёта:', e);
+
+                const fallbackClass = computedClasses.find((c) => c.classType === selectedAnalyticsClass)
+                    || bClass
+                    || computedClasses[0];
+                const fallbackRows = Array.isArray(fallbackClass?.data) ? fallbackClass.data : [];
+                setRows(fallbackRows);
+                setItems([]);
+                setMetricNames(extractMetricNamesFromResult(fallbackRows[0] || {}));
+            }
+
+            toast.success('Расчёт выполнен', {
+                autoClose: delay,
+            });
         } catch (err) {
             alert('Ошибка расчёта: ' + err.message);
         } finally {
