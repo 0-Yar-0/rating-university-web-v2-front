@@ -6,6 +6,7 @@ import ResultsTable from '../components/ResultsTable.jsx';
 import Analytics from './Analytics.jsx';
 import History from './History.jsx';
 import MenuDropdown from '../components/MenuDropdown.jsx';
+import { DEFAULT_METRIC_NAMES } from '../constants.js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 const YEAR_NOW = new Date().getFullYear();
@@ -758,12 +759,7 @@ export default function InputPage() {
 
     // ---------------- For Analytics.jsx ----------------
     const [rows, setRows] = useState([]);
-    const [metricNames, setMetricNames] = useState({
-        codeB11: 'B11',
-        codeB12: 'B12',
-        codeB13: 'B13',
-        codeB21: 'B21',
-    });
+    const [metricNames, setMetricNames] = useState(DEFAULT_METRIC_NAMES);
     const [calcSummary, setCalcSummary] = useState([]);
     const [historyClasses, setHistoryClasses] = useState([]);
     const [selectedAnalyticsClass, setSelectedAnalyticsClass] = useState('B');
@@ -1826,23 +1822,23 @@ export default function InputPage() {
 
     const metricModeGroupTitles = {
         1: 'Корректирующий коэффициент',
-        2: metricNames.codeB11 || 'B11',
-        3: metricNames.codeB12 || 'B12',
-        4: metricNames.codeB13 || 'B13',
-        5: metricNames.codeB21 || 'B21',
-        6: metricNames.codeB22 || 'B22',
-        7: metricNames.codeB23 || 'B23',
-        8: metricNames.codeB24 || 'B24',
-        9: metricNames.codeB25 || 'B25',
-        10: metricNames.codeB26 || 'B26',
-        11: metricNames.codeB31 || 'B31',
-        12: metricNames.codeB32 || 'B32',
-        13: metricNames.codeB33 || 'B33',
-        14: metricNames.codeB34 || 'B34',
-        15: metricNames.codeB41 || 'B41',
-        16: metricNames.codeB42 || 'B42',
-        17: metricNames.codeB43 || 'B43',
-        18: metricNames.codeB44 || 'B44',
+        2: metricNames.codeB11 || DEFAULT_METRIC_NAMES.codeB11,
+        3: metricNames.codeB12 || DEFAULT_METRIC_NAMES.codeB12,
+        4: metricNames.codeB13 || DEFAULT_METRIC_NAMES.codeB13,
+        5: metricNames.codeB21 || DEFAULT_METRIC_NAMES.codeB21,
+        6: metricNames.codeB22 || DEFAULT_METRIC_NAMES.codeB22,
+        7: metricNames.codeB23 || DEFAULT_METRIC_NAMES.codeB23,
+        8: metricNames.codeB24 || DEFAULT_METRIC_NAMES.codeB24,
+        9: metricNames.codeB25 || DEFAULT_METRIC_NAMES.codeB25,
+        10: metricNames.codeB26 || DEFAULT_METRIC_NAMES.codeB26,
+        11: metricNames.codeB31 || DEFAULT_METRIC_NAMES.codeB31,
+        12: metricNames.codeB32 || DEFAULT_METRIC_NAMES.codeB32,
+        13: metricNames.codeB33 || DEFAULT_METRIC_NAMES.codeB33,
+        14: metricNames.codeB34 || DEFAULT_METRIC_NAMES.codeB34,
+        15: metricNames.codeB41 || DEFAULT_METRIC_NAMES.codeB41,
+        16: metricNames.codeB42 || DEFAULT_METRIC_NAMES.codeB42,
+        17: metricNames.codeB43 || DEFAULT_METRIC_NAMES.codeB43,
+        18: metricNames.codeB44 || DEFAULT_METRIC_NAMES.codeB44,
     };
 
     const fieldsByGroupMetrics = {
@@ -2074,7 +2070,14 @@ export default function InputPage() {
                         dto[k] = next[k];
                     }
                 });
-                Api.updateMetricNames(dto).catch((e) => console.warn('Ошибка сохранения имён метрик', e));
+                Api.updateMetricNames(dto)
+                    .then(() => {
+                        toast.success('✓ Названия метрик сохранены');
+                    })
+                    .catch((e) => {
+                        console.warn('Ошибка сохранения имён метрик', e);
+                        toast.error('✗ Ошибка при сохранении метрик');
+                    });
             }
 
             return next;

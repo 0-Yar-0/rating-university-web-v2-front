@@ -9,6 +9,7 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
+import { DEFAULT_METRIC_NAMES } from '../constants.js';
 
 const METRIC_MAX = {
     a11: 5,
@@ -93,7 +94,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
 
     const metrics = metricKeys.map((k) => ({
         key: k,
-        label: metricNames[`code${k.toUpperCase()}`] || k.toUpperCase(),
+        label: metricNames[`code${k.toUpperCase()}`] || DEFAULT_METRIC_NAMES[`code${k.toUpperCase()}`] || k.toUpperCase(),
     }));
 
     // данные вида:
