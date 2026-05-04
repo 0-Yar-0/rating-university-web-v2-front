@@ -91,15 +91,9 @@ const DEFAULT_B_PARAMS = {
     NAo: '',
     NAv: '',
     NAz: '',
-    PNo: '',
-    PNv: '',
-    PNz: '',
     Po: '',
     Pv: '',
     Pz: '',
-    DIo: '',
-    DIv: '',
-    DIz: '',
     k: '3',
     CHPSi2022: '',
     CHPi2022: '',
@@ -154,7 +148,6 @@ const DEFAULT_B_PARAMS = {
     NV2024: '',
     NZ2024: '',
     NOA2024: '',
-    DI: '',
     // direct metric input mode (final values)
     B11: '',
     B12: '',
@@ -404,12 +397,12 @@ function buildExportPayload(years, paramsA, paramsB, paramsM, inputMode = 'metri
 
             return {
                 year,
-                PNo: normalizeNumber(firstDefinedValue(p.PNo, pb.PNo)),
-                PNv: normalizeNumber(firstDefinedValue(p.PNv, pb.PNv)),
-                PNz: normalizeNumber(firstDefinedValue(p.PNz, pb.PNz)),
-                DIo: normalizeNumber(firstDefinedValue(p.DIo, pb.DIo, pb.DI)),
-                DIv: normalizeNumber(firstDefinedValue(p.DIv, pb.DIv)),
-                DIz: normalizeNumber(firstDefinedValue(p.DIz, pb.DIz)),
+                PNo: normalizeNumber(p.PNo),
+                PNv: normalizeNumber(p.PNv),
+                PNz: normalizeNumber(p.PNz),
+                DIo: normalizeNumber(p.DIo),
+                DIv: normalizeNumber(p.DIv),
+                DIz: normalizeNumber(p.DIz),
                 PRF: normalizeNumber(p.PRF),
                 KCO: normalizeNumber(p.KCO),
                 ZKN: normalizeNumber(p.ZKN),
@@ -2077,7 +2070,7 @@ export default function InputPage() {
             if (first && first.calcResultId) {
                 const dto = { calcResultId: first.calcResultId };
                 Object.keys(next).forEach((k) => {
-                    if (k.startsWith('codeB')) {
+                    if (k.startsWith('code')) {
                         dto[k] = next[k];
                     }
                 });
