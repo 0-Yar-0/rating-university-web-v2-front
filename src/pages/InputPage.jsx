@@ -9,6 +9,9 @@ import MenuDropdown from '../components/MenuDropdown.jsx';
 import { DEFAULT_METRIC_NAMES } from '../constants.js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { jsPDF } from 'jspdf';
+import * as XLSX from '@e965/xlsx';
+
 const YEAR_NOW = new Date().getFullYear();
 const B25_B26_START_YEAR = 2022;
 const STORAGE_KEY = 'unirating_b_params_v2';
@@ -1353,6 +1356,85 @@ export default function InputPage() {
         fileRef.current?.click();
     };
 
+    // const handleExportExcel = () => {
+    //     const worksheetData = rows.map(row => ({
+    //         Year: row.year,
+    //         ClassType: row.classType,
+    //         Total: row.total,
+    //         KI: row.ki,
+    //         // Add other fields you want to include in the Excel
+    //     }));
+
+    //     // const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+    //     // const workbook = XLSX.utils.book_new();
+    //     // XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+    //     // XLSX.writeFile(workbook, "report.xlsx");
+    // };
+
+    const handleExportExcel = () => {
+        try {
+            const workbook = XLSX.utils.book_new();
+
+            // --- 1. Prepare Input Data (A, B, M) ---
+            // Reuse your existing logic to flatten params into arrays
+            const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
+
+            payload.classes.forEach((cls) => {
+                const sheetName = `Inputs_${cls.classType}`;
+                const worksheet = XLSX.utils.json_to_sheet(cls.data);
+                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+            });
+
+            // --- 2. Prepare Calculated Results (Rows) ---
+            if (rows && rows.length > 0) {
+                const sheetName = `Results_${selectedAnalyticsClass}`;
+                // Filter out internal keys if necessary, or export all numeric/string fields
+                const cleanRows = rows.map(row => {
+                    const clean = {};
+                    Object.keys(row).forEach(key => {
+                        // Optional: Exclude internal IDs if you don't want them in Excel
+                        if (key === 'calcResultId') return;
+                        clean[key] = row[key];
+                    });
+                    return clean;
+                });
+
+                const resultSheet = XLSX.utils.json_to_sheet(cleanRows);
+                XLSX.utils.book_append_sheet(workbook, resultSheet, sheetName);
+            } else {
+                // Optional: Create an empty sheet if no results exist yet
+                const emptySheet = XLSX.utils.json_to_sheet([{}]);
+                XLSX.utils.book_append_sheet(workbook, emptySheet, "Results_NoData");
+            }
+
+            // --- 3. Trigger Download ---
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+            XLSX.writeFile(workbook, `unirating-report-${timestamp}.xlsx`);
+
+        } catch (e) {
+            alert('Ошибка экспорта в Excel: ' + (e?.message || e));
+        }
+    };
+
+
+    const handleExportPdf = () => {
+        const doc = new jsPDF();
+        doc.text("Report", 10, 10);
+
+        let yPos = 20;
+        rows.forEach((row, index) => {
+            doc.text(`Year: ${row.year}, ClassType: ${row.classType}, Total: ${row.total}, KI: ${row.ki}`, 10, yPos);
+            yPos += 10;
+            if (yPos >= 280) { // Handle page breaks
+                doc.addPage();
+                yPos = 20;
+            }
+        });
+
+        doc.save("report.pdf");
+    };
+
+
     const handleFillWithDefaults = () => {
         const uniqueYears = [...new Set([...years, 2025, 2026])].sort((a, b) => b - a);
 
@@ -2677,6 +2759,8 @@ export default function InputPage() {
                                 menuItems={[
                                     { label: 'Импорт JSON', onClick: handleImportClick },
                                     { label: 'Экспорт JSON', onClick: handleExport },
+                                    { label: 'Экспорт EXCEL', onClick: handleExportExcel },
+                                    { label: 'Экспорт PDF', onClick: handleExportPdf },
                                     { label: 'Заполнить значениями по умолчанию', onClick: handleFillWithDefaults },
                                     { label: 'Удалить текущий год', onClick: handleDeleteCurrentYear },
                                     { label: 'Очистить всё', onClick: clearAll },

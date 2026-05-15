@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-export default function MenuDropdown({ menuItems, disabled = false, className = '', triggerLabel = '⋯' }) {
+export default function MenuDropdown({ menuItems, disabled = false, className = '', triggerLabel = '···' }) {
     const [menuOpen, setMenuOpen] = useState(false);
 
     return (
