@@ -1356,84 +1356,587 @@ export default function InputPage() {
         fileRef.current?.click();
     };
 
-    // const handleExportExcel = () => {
-    //     const worksheetData = rows.map(row => ({
-    //         Year: row.year,
-    //         ClassType: row.classType,
-    //         Total: row.total,
-    //         KI: row.ki,
-    //         // Add other fields you want to include in the Excel
-    //     }));
+    const handleFileSelected = async (e) => {
+        const file = e.target.files?.[0];
 
-    //     // const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-    //     // const workbook = XLSX.utils.book_new();
-    //     // XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
-    //     // XLSX.writeFile(workbook, "report.xlsx");
-    // };
+        if (!file) return;
 
-    const handleExportExcel = () => {
         try {
-            const workbook = XLSX.utils.book_new();
+            const text = await file.text();
+            const json = JSON.parse(text);
 
-            // --- 1. Prepare Input Data (A, B, M) ---
-            // Reuse your existing logic to flatten params into arrays
-            const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
+            if (!json || !Array.isArray(json.classes)) throw new Error('Неверный формат JSON');
 
-            payload.classes.forEach((cls) => {
-                const sheetName = `Inputs_${cls.classType}`;
-                const worksheet = XLSX.utils.json_to_sheet(cls.data);
-                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-            });
+            const aBlock = json.classes.find((c) => c.classType === 'A');
+            const bBlock = json.classes.find((c) => c.classType === 'B');
+            const mBlock = json.classes.find((c) => c.classType === 'M');
+            if (!bBlock || !Array.isArray(bBlock.data)) throw new Error('Нет данных класса B');
 
-            // --- 2. Prepare Calculated Results (Rows) ---
-            if (rows && rows.length > 0) {
-                const sheetName = `Results_${selectedAnalyticsClass}`;
-                // Filter out internal keys if necessary, or export all numeric/string fields
-                const cleanRows = rows.map(row => {
-                    const clean = {};
-                    Object.keys(row).forEach(key => {
-                        // Optional: Exclude internal IDs if you don't want them in Excel
-                        if (key === 'calcResultId') return;
-                        clean[key] = row[key];
-                    });
-                    return clean;
-                });
+            const mapA = {};
+            const map = {};
+            const mapM = {};
+            const ys = [];
 
-                const resultSheet = XLSX.utils.json_to_sheet(cleanRows);
-                XLSX.utils.book_append_sheet(workbook, resultSheet, sheetName);
-            } else {
-                // Optional: Create an empty sheet if no results exist yet
-                const emptySheet = XLSX.utils.json_to_sheet([{}]);
-                XLSX.utils.book_append_sheet(workbook, emptySheet, "Results_NoData");
+            if (aBlock && Array.isArray(aBlock.data)) {
+                for (const row of aBlock.data) {
+                    if (!row.year) continue;
+                    ys.push(row.year);
+                    mapA[row.year] = {
+                        PNo: row.PNo ?? '',
+                        PNv: row.PNv ?? '',
+                        PNz: row.PNz ?? '',
+                        DIo: row.DIo ?? '',
+                        DIv: row.DIv ?? '',
+                        DIz: row.DIz ?? '',
+                        PRF: row.PRF ?? '',
+                        KCO: firstDefinedValue(row.KCO, row.KTSO),
+                        ZKN: row.ZKN ?? '',
+                        CHVA: row.CHVA ?? '',
+                        CHPA: row.CHPA ?? '',
+                        CZ: row.CZ ?? '',
+                        CV: row.CV ?? '',
+                        A23RF: firstDefinedValue(row.A23RF, row.A23_avg, row.A23_RF),
+                        sumPoints: row.sumPoints ?? '',
+                        k: firstDefinedValue(row.k, row.K, 3),
+                        WL2022: row.WL2022 ?? '',
+                        WL2023: row.WL2023 ?? '',
+                        WL2024: row.WL2024 ?? '',
+                        NPR2022: row.NPR2022 ?? '',
+                        NPR2023: row.NPR2023 ?? '',
+                        NPR2024: row.NPR2024 ?? '',
+                        DN2022: row.DN2022 ?? '',
+                        DN2023: row.DN2023 ?? '',
+                        DN2024: row.DN2024 ?? '',
+                        RDN2022: row.RDN2022 ?? '',
+                        RDN2023: row.RDN2023 ?? '',
+                        RDN2024: row.RDN2024 ?? '',
+                        IA2022: row.IA2022 ?? '',
+                        IA2023: row.IA2023 ?? '',
+                        IA2024: row.IA2024 ?? '',
+                        ASP2022: row.ASP2022 ?? '',
+                        ASP2023: row.ASP2023 ?? '',
+                        ASP2024: row.ASP2024 ?? '',
+                        OD2022: row.OD2022 ?? '',
+                        OD2023: row.OD2023 ?? '',
+                        OD2024: row.OD2024 ?? '',
+                        PFN: row.PFN ?? '',
+                        ASO: row.ASO ?? '',
+                        DS: firstDefinedValue(row.DS, row.A37_o, row.A37_raw),
+                        KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.KI),
+                        A11: firstDefinedValue(row.A11, row.a11),
+                        A21: firstDefinedValue(row.A21, row.a21),
+                        A22: firstDefinedValue(row.A22, row.a22),
+                        A23: firstDefinedValue(row.A23, row.a23),
+                        A31: firstDefinedValue(row.A31, row.a31),
+                        A32: firstDefinedValue(row.A32, row.a32),
+                        A33: firstDefinedValue(row.A33, row.a33),
+                        A34: firstDefinedValue(row.A34, row.a34),
+                        A35: firstDefinedValue(row.A35, row.a35),
+                        A36: firstDefinedValue(row.A36, row.a36),
+                        A37: firstDefinedValue(row.A37, row.a37),
+                    };
+                }
+            }
+            for (const row of bBlock.data) {
+                if (!row.year) continue;
+                ys.push(row.year);
+                map[row.year] = {
+                    ENa: row.ENa ?? '',
+                    ENb: row.ENb ?? '',
+                    ENc: row.ENc ?? '',
+                    Eb: row.Eb ?? '',
+                    Ec: row.Ec ?? '',
+                    beta121: row.beta121 ?? '',
+                    beta122: row.beta122 ?? '',
+                    beta131: row.beta131 ?? '',
+                    beta132: row.beta132 ?? '',
+                    beta211: row.beta211 ?? '',
+                    beta212: row.beta212 ?? '',
+                    // extended
+                    NBo: firstDefinedValue(row.NBo, row.NBP),
+                    NBv: firstDefinedValue(row.NBv, ''),
+                    NBz: firstDefinedValue(row.NBz, ''),
+                    NMo: firstDefinedValue(row.NMo, row.NMP),
+                    NMv: firstDefinedValue(row.NMv, ''),
+                    NMz: firstDefinedValue(row.NMz, ''),
+                    ACo: firstDefinedValue(row.ACo, row.ACP),
+                    ACv: firstDefinedValue(row.ACv, ''),
+                    ACz: firstDefinedValue(row.ACz, ''),
+                    OPC: row.OPC ?? '',
+                    ACC: row.ACC ?? '',
+                    KPo: firstDefinedValue(row.KPo, row.PKP),
+                    KPv: firstDefinedValue(row.KPv, ''),
+                    KPz: firstDefinedValue(row.KPz, ''),
+                    PPPo: firstDefinedValue(row.PPPo, row.PPP),
+                    PPPv: firstDefinedValue(row.PPPv, ''),
+                    PPPz: firstDefinedValue(row.PPPz, ''),
+                    NPo: firstDefinedValue(row.NPo, row.No),
+                    NPv: firstDefinedValue(row.NPv, row.Nv),
+                    NPz: firstDefinedValue(row.NPz, row.Nz),
+                    NOA: row.NOA ?? '',
+                    NAo: firstDefinedValue(row.NAo, row.NAP),
+                    NAv: firstDefinedValue(row.NAv, ''),
+                    NAz: firstDefinedValue(row.NAz, ''),
+                    PNo: firstDefinedValue(row.PNo, ''),
+                    PNv: firstDefinedValue(row.PNv, ''),
+                    PNz: firstDefinedValue(row.PNz, ''),
+                    Po: firstDefinedValue(row.Po, ''),
+                    Pv: firstDefinedValue(row.Pv, ''),
+                    Pz: firstDefinedValue(row.Pz, ''),
+                    DIo: firstDefinedValue(row.DIo, row.DI),
+                    DIv: firstDefinedValue(row.DIv, ''),
+                    DIz: firstDefinedValue(row.DIz, ''),
+                    k: firstDefinedValue(row.k, row.K, 3),
+                    UT: row.UT ?? '',
+                    DO: row.DO ?? '',
+                    N: row.N ?? '',
+                    Npr: row.Npr ?? '',
+                    VO: row.VO ?? '',
+                    PO: row.PO ?? '',
+                    B33: firstDefinedValue(row.B33_o, row.B33_0),
+                    Io: row.Io ?? '',
+                    Iv: row.Iv ?? '',
+                    Iz: row.Iz ?? '',
+                    No: row.No ?? '',
+                    Nv: row.Nv ?? '',
+                    Nz: row.Nz ?? '',
+                    DI: firstDefinedValue(row.DI, row.DIo),
+                    B11: firstDefinedValue(row.B11, row.b11),
+                    B12: firstDefinedValue(row.B12, row.b12),
+                    B13: firstDefinedValue(row.B13, row.b13),
+                    B21: firstDefinedValue(row.B21, row.b21),
+                    B22: firstDefinedValue(row.B22, row.b22),
+                    B23: firstDefinedValue(row.B23, row.b23),
+                    B24: firstDefinedValue(row.B24, row.b24),
+                    B25: firstDefinedValue(row.B25, row.b25),
+                    B26: firstDefinedValue(row.B26, row.b26),
+                    B31: firstDefinedValue(row.B31, row.b31),
+                    B32: firstDefinedValue(row.B32, row.b32),
+                    B33Result: firstDefinedValue(row.B33Result, row.B33, row.b33),
+                    B34: firstDefinedValue(row.B34, row.b34),
+                    B41: firstDefinedValue(row.B41, row.b41),
+                    B42: firstDefinedValue(row.B42, row.b42),
+                    B43: firstDefinedValue(row.B43, row.b43),
+                    B44: firstDefinedValue(row.B44, row.b44),
+                    KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.KI),
+                };
+
+                const dynamicYears = yearsByK(getKYears(map[row.year]));
+                for (const y of dynamicYears) {
+                    map[row.year][`CHPSi${y}`] = firstDefinedValue(row[`CHPSi${y}`], row[`ЧПСi${y}`], row[`CPSi${y}`]);
+                    map[row.year][`CHPi${y}`] = firstDefinedValue(row[`CHPi${y}`], row[`ЧПi${y}`], row[`CPi${y}`]);
+                    map[row.year][`CHOSi${y}`] = firstDefinedValue(row[`CHOSi${y}`], row[`ЧОСi${y}`], row[`COSi${y}`]);
+                    map[row.year][`CHOi${y}`] = firstDefinedValue(row[`CHOi${y}`], row[`ЧОi${y}`], row[`COi${y}`]);
+                }
+                for (const y of yearsByKFrom(2023, getKYears(map[row.year]))) {
+                    map[row.year][`NR${y}`] = firstDefinedValue(row[`NR${y}`]);
+                }
+                for (const y of yearsByKFrom(2022, getKYears(map[row.year]))) {
+                    map[row.year][`WL${y}`] = firstDefinedValue(row[`WL${y}`]);
+                    map[row.year][`NPR${y}`] = firstDefinedValue(row[`NPR${y}`]);
+                    map[row.year][`DN${y}`] = firstDefinedValue(row[`DN${y}`]);
+                    map[row.year][`OD${y}`] = firstDefinedValue(row[`OD${y}`]);
+                    map[row.year][`NO${y}`] = firstDefinedValue(row[`NO${y}`], row[`No${y}`]);
+                    map[row.year][`NV${y}`] = firstDefinedValue(row[`NV${y}`], row[`Nv${y}`]);
+                    map[row.year][`NZ${y}`] = firstDefinedValue(row[`NZ${y}`], row[`Nz${y}`]);
+                    map[row.year][`NOA${y}`] = firstDefinedValue(row[`NOA${y}`], row[`Noa${y}`]);
+                }
             }
 
-            // --- 3. Trigger Download ---
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-            XLSX.writeFile(workbook, `unirating-report-${timestamp}.xlsx`);
+            if (mBlock && Array.isArray(mBlock.data)) {
+                for (const row of mBlock.data) {
+                    if (!row.year) continue;
+                    ys.push(row.year);
+                    mapM[row.year] = {
+                        k: firstDefinedValue(row.k, row.K, 3),
+                        ZMD: row.ZMD ?? '',
+                        ZM: row.ZM ?? '',
+                        CHZ: row.CHZ ?? '',
+                        ZPK: row.ZPK ?? '',
+                        MDP: row.MDP ?? '',
+                        PRF: firstDefinedValue(row.PRF, row.M14_PRF),
+                        KCO: firstDefinedValue(row.KCO, row.KTSO, row.M14_KCO),
+                        M21_poa: firstDefinedValue(row.M21_poa, row.M21_o, row.M21_raw),
+                        M21_licensed: firstDefinedValue(row.M21_licensed),
+                        M22_NMo: firstDefinedValue(row.M22_NMo),
+                        M22_NMv: firstDefinedValue(row.M22_NMv),
+                        M22_NMz: firstDefinedValue(row.M22_NMz),
+                        M22_ACo: firstDefinedValue(row.M22_ACo),
+                        M22_ACv: firstDefinedValue(row.M22_ACv),
+                        M22_ACz: firstDefinedValue(row.M22_ACz),
+                        M22_OPC: firstDefinedValue(row.M22_OPC),
+                        M22_ACC: firstDefinedValue(row.M22_ACC),
+                        M23_No: firstDefinedValue(row.M23_No),
+                        M23_Nv: firstDefinedValue(row.M23_Nv),
+                        M23_Nz: firstDefinedValue(row.M23_Nz),
+                        M23_KPo: firstDefinedValue(row.M23_KPo),
+                        M23_KPv: firstDefinedValue(row.M23_KPv),
+                        M23_KPz: firstDefinedValue(row.M23_KPz),
+                        M23_PPPo: firstDefinedValue(row.M23_PPPo),
+                        M23_PPPv: firstDefinedValue(row.M23_PPPv),
+                        M23_PPPz: firstDefinedValue(row.M23_PPPz),
+                        M23_NOA: firstDefinedValue(row.M23_NOA),
+                        M24_NAP: firstDefinedValue(row.M24_NAP),
+                        M24_PN: firstDefinedValue(row.M24_PN),
+                        M24_o: firstDefinedValue(row.M24_o, row.M24_raw),
+                        M25_BPo: firstDefinedValue(row.M25_BPo, row.BPo),
+                        M25_BPv: firstDefinedValue(row.M25_BPv, row.BPv),
+                        M25_BPz: firstDefinedValue(row.M25_BPz, row.BPz),
+                        M25_CPo: firstDefinedValue(row.M25_CPo, row.CPo),
+                        M25_CPv: firstDefinedValue(row.M25_CPv, row.CPv),
+                        M25_CPz: firstDefinedValue(row.M25_CPz, row.CPz),
+                        M25_NMo: firstDefinedValue(row.M25_NMo, row.NMo),
+                        M25_NMv: firstDefinedValue(row.M25_NMv, row.NMv),
+                        M25_NMz: firstDefinedValue(row.M25_NMz, row.NMz),
+                        M26_CHPSi2022: firstDefinedValue(row.M26_CHPSi2022, row.CHPSi2022),
+                        M26_CHPi2022: firstDefinedValue(row.M26_CHPi2022, row.CHPi2022),
+                        M26_CHPSi2023: firstDefinedValue(row.M26_CHPSi2023, row.CHPSi2023),
+                        M26_CHPi2023: firstDefinedValue(row.M26_CHPi2023, row.CHPi2023),
+                        M26_CHPSi2024: firstDefinedValue(row.M26_CHPSi2024, row.CHPSi2024),
+                        M26_CHPi2024: firstDefinedValue(row.M26_CHPi2024, row.CHPi2024),
+                        M27_CHOSi2022: firstDefinedValue(row.M27_CHOSi2022, row.CHOSi2022),
+                        M27_CHOi2022: firstDefinedValue(row.M27_CHOi2022, row.CHOi2022),
+                        M27_CHOSi2023: firstDefinedValue(row.M27_CHOSi2023, row.CHOSi2023),
+                        M27_CHOi2023: firstDefinedValue(row.M27_CHOi2023, row.CHOi2023),
+                        M27_CHOSi2024: firstDefinedValue(row.M27_CHOSi2024, row.CHOSi2024),
+                        M27_CHOi2024: firstDefinedValue(row.M27_CHOi2024, row.CHOi2024),
+                        M22_o: firstDefinedValue(row.M22_o, row.M22_raw),
+                        M23_o: firstDefinedValue(row.M23_o, row.M23_raw),
+                        M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
+                        N: row.N ?? '',
+                        Npr: row.Npr ?? '',
+                        VO: row.VO ?? '',
+                        PO: row.PO ?? '',
+                        NR2023: row.NR2023 ?? '',
+                        NR2024: row.NR2024 ?? '',
+                        NR2025: row.NR2025 ?? '',
+                        WL2022: row.WL2022 ?? '',
+                        WL2023: row.WL2023 ?? '',
+                        WL2024: row.WL2024 ?? '',
+                        NPR2022: row.NPR2022 ?? '',
+                        NPR2023: row.NPR2023 ?? '',
+                        NPR2024: row.NPR2024 ?? '',
+                        DN2022: row.DN2022 ?? '',
+                        DN2023: row.DN2023 ?? '',
+                        DN2024: row.DN2024 ?? '',
+                        Io: row.Io ?? '',
+                        Iv: row.Iv ?? '',
+                        Iz: row.Iz ?? '',
+                        No: row.No ?? '',
+                        Nv: row.Nv ?? '',
+                        Nz: row.Nz ?? '',
+                        OD2022: row.OD2022 ?? '',
+                        OD2023: row.OD2023 ?? '',
+                        OD2024: row.OD2024 ?? '',
+                        NO2022: firstDefinedValue(row.NO2022, row.No2022),
+                        NV2022: firstDefinedValue(row.NV2022, row.Nv2022),
+                        NZ2022: firstDefinedValue(row.NZ2022, row.Nz2022),
+                        NOA2022: firstDefinedValue(row.NOA2022, row.Noa2022),
+                        NO2023: firstDefinedValue(row.NO2023, row.No2023),
+                        NV2023: firstDefinedValue(row.NV2023, row.Nv2023),
+                        NZ2023: firstDefinedValue(row.NZ2023, row.Nz2023),
+                        NOA2023: firstDefinedValue(row.NOA2023, row.Noa2023),
+                        NO2024: firstDefinedValue(row.NO2024, row.No2024),
+                        NV2024: firstDefinedValue(row.NV2024, row.Nv2024),
+                        NZ2024: firstDefinedValue(row.NZ2024, row.Nz2024),
+                        NOA2024: firstDefinedValue(row.NOA2024, row.Noa2024),
+                        KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI),
+                        M11: firstDefinedValue(row.M11, row.m11),
+                        M12: firstDefinedValue(row.M12, row.m12),
+                        M13: firstDefinedValue(row.M13, row.m13),
+                        M14: firstDefinedValue(row.M14, row.m14),
+                        M21: firstDefinedValue(row.M21, row.m21),
+                        M22: firstDefinedValue(row.M22, row.m22),
+                        M23: firstDefinedValue(row.M23, row.m23),
+                        M24: firstDefinedValue(row.M24, row.m24),
+                        M25: firstDefinedValue(row.M25, row.m25),
+                        M26: firstDefinedValue(row.M26, row.m26),
+                        M27: firstDefinedValue(row.M27, row.m27),
+                        M31: firstDefinedValue(row.M31, row.m31, row.M31_o, row.M31_raw),
+                        M32: firstDefinedValue(row.M32, row.m32),
+                        M33: firstDefinedValue(row.M33, row.m33),
+                        M41: firstDefinedValue(row.M41, row.m41),
+                        M42: firstDefinedValue(row.M42, row.m42),
+                        M43: firstDefinedValue(row.M43, row.m43),
+                        M44: firstDefinedValue(row.M44, row.m44),
+                    };
+                }
+            }
 
-        } catch (e) {
-            alert('Ошибка экспорта в Excel: ' + (e?.message || e));
+            const uniqueYears = [...new Set(ys)].sort((a, b) => a - b);
+            if (!uniqueYears.length) throw new Error('Пустые данные');
+
+            setParamsA(mapA);
+            setParamsB(map);
+            setParamsM(mapM);
+            setYears(uniqueYears);
+            setCurrentYear(uniqueYears[0]);
+
+            const payload = {
+                years: uniqueYears,
+                currentYear: uniqueYears[0],
+                paramsA: mapA,
+                paramsB: map,
+                paramsM: mapM,
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+
+            alert('Импорт выполнен');
+        } catch (err) {
+            alert('Ошибка импорта: ' + err.message);
+        } finally {
+            e.target.value = '';
         }
     };
 
+    const handleExportExcel = () => {
+        const workbook = XLSX.utils.book_new();
+
+        // --- 1. Prepare Input Data (A, B, M) ---
+        const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
+
+        payload.classes.forEach((cls) => {
+            const sheetName = `Inputs_${cls.classType}`;
+
+            const headers = Object.keys(cls.data[0]);
+            const transposedData = headers.map(key => {
+                return [key, ...cls.data.map(row => row[key])];
+            });
+
+            const worksheet = XLSX.utils.aoa_to_sheet(transposedData);
+
+            // Adjust column widths
+            worksheet['!cols'] = [{ wch: 15 }];
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        });
+
+        // // --- 2. Prepare Calculated Results (Rows) ---
+
+        // 2. Export Computed Results (New logic for Results_A, Results_B, Results_M)
+        // We iterate over the historyClasses which contains the computed data per class type
+        historyClasses.forEach((cls) => {
+            const classType = cls.classType;
+
+            // Find the specific iteration results to export (defaulting to latest if not specified)
+            const items = Array.isArray(cls.items) ? cls.items : [];
+            const targetIter = selectedIteration;
+
+            let resultsData = [];
+            if (items.length > 0) {
+                const selectedItem = targetIter
+                    ? items.find((item) => item.iter === targetIter)
+                    : items.reduce((maxItem, item) => (item.iter > maxItem.iter ? item : maxItem));
+
+                resultsData = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
+            }
+
+            if (resultsData.length > 0) {
+                const sheetName = `Results_${classType}`;
+
+                // Get all unique keys, ensuring 'year' is first if it exists
+                const allKeysSet = new Set();
+                resultsData.forEach(row => Object.keys(row).forEach(key => allKeysSet.add(key)));
+                const allKeys = Array.from(allKeysSet);
+                // Sort keys, prioritizing 'year' to be first if present
+                const sortedHeaders = ['year', ...allKeys.filter(k => k !== 'year').sort()];
+
+                // Create transposed array: [[Header1, Val1_Row1, Val1_Row2, ...], [Header2, Val2_Row1, Val2_Row2, ...], ...]
+                const transposedResultsData = sortedHeaders.map(headerKey => {
+                    const row = [headerKey];
+                    resultsData.forEach(originalRow => {
+                        row.push(originalRow[headerKey] ?? '');
+                    });
+                    return row;
+                });
+
+                const worksheet = XLSX.utils.aoa_to_sheet(transposedResultsData);
+
+                // Adjust column widths
+                worksheet['!cols'] = [{ wch: 15 }];
+
+                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+            }
+        })
+
+        // 3. Trigger Download
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        XLSX.writeFile(workbook, `unirating-full-report-${timestamp}.xlsx`);
+    };
 
     const handleExportPdf = () => {
         const doc = new jsPDF();
-        doc.text("Report", 10, 10);
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 10;
+        const colMargin = 5; // Space between columns
+        const lineHeight = 1;
+        const cellPadding = 1; // Internal padding for cells
 
-        let yPos = 20;
-        rows.forEach((row, index) => {
-            doc.text(`Year: ${row.year}, ClassType: ${row.classType}, Total: ${row.total}, KI: ${row.ki}`, 10, yPos);
-            yPos += 10;
-            if (yPos >= 280) { // Handle page breaks
+        let yPos = margin;
+        const timestamp = new Date().toLocaleString('ru-RU');
+
+        // --- Helper Functions ---
+        const checkAndAddPageIfNeeded = (requiredSpace = lineHeight) => {
+            if (yPos + requiredSpace > pageHeight - margin) {
                 doc.addPage();
-                yPos = 20;
+                yPos = margin;
+                return true; // Indicate a new page was added
+            }
+            return false;
+        };
+
+        const addTitle = (text) => {
+            checkAndAddPageIfNeeded(10);
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text(text, margin, yPos);
+            yPos += 8;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+        };
+
+        const addSectionHeader = (text) => {
+            checkAndAddPageIfNeeded(8);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0, 0, 100); // Dark Blue
+            doc.text(text, margin, yPos);
+            yPos += 6;
+            doc.setDrawColor(200);
+            doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2); // Full line width
+            yPos += 4;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+        };
+
+        const drawTable = (headers, dataRows, tableName) => {
+            addSectionHeader(tableName);
+
+            if (!headers || headers.length === 0 || !dataRows || dataRows.length === 0) {
+                checkAndAddPageIfNeeded();
+                doc.text("No data available.", margin, yPos);
+                yPos += lineHeight;
+                return;
+            }
+
+            const numCols = headers.length;
+            const numDataRows = dataRows.length;
+
+            // Calculate column widths based on content and page width
+            // Assume equal width initially, subtract space for margins/padding
+            const availableWidth = pageWidth - 2 * margin - (numCols + 1) * colMargin;
+            const colWidth = Math.max(15, availableWidth / numCols); // Minimum width of 15 units
+
+            // Font settings for table
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            doc.setFillColor(240, 240, 240); // Light gray for header background
+
+            // Draw Header Row
+            checkAndAddPageIfNeeded(lineHeight + 2 * cellPadding); // Account for header height
+            let currentColX = margin + colMargin;
+
+            // Draw header background
+            doc.rect(currentColX, yPos - lineHeight + 2 * cellPadding, availableWidth, lineHeight, 'F'); // Fill rectangle
+
+            for (let h = 0; h < numCols; h++) {
+                doc.setFont(undefined, 'bold'); // Bold header text
+                const headerText = String(headers[h]).substring(0, 20); // Truncate if too long
+                doc.text(headerText, currentColX + cellPadding, yPos);
+                doc.setFont(undefined, 'normal'); // Reset font for data
+                currentColX += colWidth + colMargin;
+            }
+            yPos += lineHeight + 2 * cellPadding; // Move Y position down after header
+            doc.setFillColor(255, 255, 255); // Reset fill color for data rows
+
+            // Draw Data Rows
+            for (let r = 0; r < numDataRows; r++) {
+                checkAndAddPageIfNeeded(lineHeight + 2 * cellPadding); // Check before drawing row
+                currentColX = margin + colMargin;
+
+                for (let c = 0; c < numCols; c++) {
+                    const cellText = String(dataRows[r][c] ?? '').substring(0, 30); // Truncate data if too long
+                    // Optional: Add borders to cells
+                    // doc.rect(currentColX, yPos - lineHeight + 2*cellPadding, colWidth, lineHeight);
+                    doc.text(cellText, currentColX + cellPadding, yPos);
+                    currentColX += colWidth + colMargin;
+                }
+                yPos += lineHeight + 2 * cellPadding; // Move Y position down after row
+            }
+        };
+        // --- End Helper Functions ---
+
+        // --- 1. Header ---
+        addTitle(`University Rating Report`);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Generated: ${timestamp}`, margin, yPos);
+        yPos += 10;
+
+        // --- 2. Export Input Parameters (A, B, M) ---
+        // This part remains similar to your previous implementation, adapted for helper functions
+        const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
+
+        payload.classes.forEach((cls) => {
+            const inputsSheetName = `Inputs_${cls.classType}`;
+            const headers = Object.keys(cls.data[0]);
+            const transposedData = headers.map(key => {
+                return [key, ...cls.data.map(row => row[key])];
+            });
+
+            drawTable(transposedData[0], transposedData.slice(1), inputsSheetName); // First row is headers, rest are data
+        });
+
+        // --- 3. Export Transposed Calculated Results (Results_A, Results_B, Results_M) ---
+        historyClasses.forEach((cls) => {
+            const classType = cls.classType;
+            const resultsSheetName = `Results_${classType}`;
+
+            // Find the specific iteration results to export (defaulting to latest if not specified)
+            const items = Array.isArray(cls.items) ? cls.items : [];
+            const targetIter = selectedIteration;
+
+            let resultsData = [];
+            if (items.length > 0) {
+                const selectedItem = targetIter
+                    ? items.find((item) => item.iter === targetIter)
+                    : items.reduce((maxItem, item) => (item.iter > maxItem.iter ? item : maxItem));
+
+                resultsData = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
+            }
+
+            if (resultsData.length > 0) {
+                // --- Transpose Logic for Results (Same as Excel) ---
+                const allKeysSet = new Set();
+                resultsData.forEach(row => Object.keys(row).forEach(key => allKeysSet.add(key)));
+                const allKeys = Array.from(allKeysSet);
+                const sortedHeaders = ['year', ...allKeys.filter(k => k !== 'year').sort()];
+
+                const transposedResultsData = sortedHeaders.map(headerKey => {
+                    const row = [headerKey];
+                    resultsData.forEach(originalRow => {
+                        row.push(originalRow[headerKey] ?? '');
+                    });
+                    return row;
+                });
+
+                // Use the drawTable helper for the transposed results
+                const headers = transposedResultsData[0]; // First row contains headers
+                const dataRows = transposedResultsData.slice(1); // Subsequent rows contain data
+                drawTable(headers, dataRows, resultsSheetName);
+            } else {
+                // Optional: Add a section if no results found for a class
+                addSectionHeader(resultsSheetName);
+                checkAndAddPageIfNeeded();
+                doc.text("No calculation results available for this class.", margin, yPos);
+                yPos += lineHeight;
             }
         });
 
-        doc.save("report.pdf");
+        // --- 4. Save PDF ---
+        doc.save(`unirating-full-report-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`);
     };
-
 
     const handleFillWithDefaults = () => {
         const uniqueYears = [...new Set([...years, 2025, 2026])].sort((a, b) => b - a);
@@ -1930,339 +2433,6 @@ export default function InputPage() {
         }));
     }
 
-    const handleFileSelected = async (e) => {
-        const file = e.target.files?.[0];
-
-        if (!file) return;
-
-        try {
-            const text = await file.text();
-            const json = JSON.parse(text);
-
-            if (!json || !Array.isArray(json.classes)) throw new Error('Неверный формат JSON');
-
-            const aBlock = json.classes.find((c) => c.classType === 'A');
-            const bBlock = json.classes.find((c) => c.classType === 'B');
-            const mBlock = json.classes.find((c) => c.classType === 'M');
-            if (!bBlock || !Array.isArray(bBlock.data)) throw new Error('Нет данных класса B');
-
-            const mapA = {};
-            const map = {};
-            const mapM = {};
-            const ys = [];
-
-            if (aBlock && Array.isArray(aBlock.data)) {
-                for (const row of aBlock.data) {
-                    if (!row.year) continue;
-                    ys.push(row.year);
-                    mapA[row.year] = {
-                        PNo: row.PNo ?? '',
-                        PNv: row.PNv ?? '',
-                        PNz: row.PNz ?? '',
-                        DIo: row.DIo ?? '',
-                        DIv: row.DIv ?? '',
-                        DIz: row.DIz ?? '',
-                        PRF: row.PRF ?? '',
-                        KCO: firstDefinedValue(row.KCO, row.KTSO),
-                        ZKN: row.ZKN ?? '',
-                        CHVA: row.CHVA ?? '',
-                        CHPA: row.CHPA ?? '',
-                        CZ: row.CZ ?? '',
-                        CV: row.CV ?? '',
-                        A23RF: firstDefinedValue(row.A23RF, row.A23_avg, row.A23_RF),
-                        sumPoints: row.sumPoints ?? '',
-                        k: firstDefinedValue(row.k, row.K, 3),
-                        WL2022: row.WL2022 ?? '',
-                        WL2023: row.WL2023 ?? '',
-                        WL2024: row.WL2024 ?? '',
-                        NPR2022: row.NPR2022 ?? '',
-                        NPR2023: row.NPR2023 ?? '',
-                        NPR2024: row.NPR2024 ?? '',
-                        DN2022: row.DN2022 ?? '',
-                        DN2023: row.DN2023 ?? '',
-                        DN2024: row.DN2024 ?? '',
-                        RDN2022: row.RDN2022 ?? '',
-                        RDN2023: row.RDN2023 ?? '',
-                        RDN2024: row.RDN2024 ?? '',
-                        IA2022: row.IA2022 ?? '',
-                        IA2023: row.IA2023 ?? '',
-                        IA2024: row.IA2024 ?? '',
-                        ASP2022: row.ASP2022 ?? '',
-                        ASP2023: row.ASP2023 ?? '',
-                        ASP2024: row.ASP2024 ?? '',
-                        OD2022: row.OD2022 ?? '',
-                        OD2023: row.OD2023 ?? '',
-                        OD2024: row.OD2024 ?? '',
-                        PFN: row.PFN ?? '',
-                        ASO: row.ASO ?? '',
-                        DS: firstDefinedValue(row.DS, row.A37_o, row.A37_raw),
-                        KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.KI),
-                        A11: firstDefinedValue(row.A11, row.a11),
-                        A21: firstDefinedValue(row.A21, row.a21),
-                        A22: firstDefinedValue(row.A22, row.a22),
-                        A23: firstDefinedValue(row.A23, row.a23),
-                        A31: firstDefinedValue(row.A31, row.a31),
-                        A32: firstDefinedValue(row.A32, row.a32),
-                        A33: firstDefinedValue(row.A33, row.a33),
-                        A34: firstDefinedValue(row.A34, row.a34),
-                        A35: firstDefinedValue(row.A35, row.a35),
-                        A36: firstDefinedValue(row.A36, row.a36),
-                        A37: firstDefinedValue(row.A37, row.a37),
-                    };
-                }
-            }
-            for (const row of bBlock.data) {
-                if (!row.year) continue;
-                ys.push(row.year);
-                map[row.year] = {
-                    ENa: row.ENa ?? '',
-                    ENb: row.ENb ?? '',
-                    ENc: row.ENc ?? '',
-                    Eb: row.Eb ?? '',
-                    Ec: row.Ec ?? '',
-                    beta121: row.beta121 ?? '',
-                    beta122: row.beta122 ?? '',
-                    beta131: row.beta131 ?? '',
-                    beta132: row.beta132 ?? '',
-                    beta211: row.beta211 ?? '',
-                    beta212: row.beta212 ?? '',
-                    // extended
-                    NBo: firstDefinedValue(row.NBo, row.NBP),
-                    NBv: firstDefinedValue(row.NBv, ''),
-                    NBz: firstDefinedValue(row.NBz, ''),
-                    NMo: firstDefinedValue(row.NMo, row.NMP),
-                    NMv: firstDefinedValue(row.NMv, ''),
-                    NMz: firstDefinedValue(row.NMz, ''),
-                    ACo: firstDefinedValue(row.ACo, row.ACP),
-                    ACv: firstDefinedValue(row.ACv, ''),
-                    ACz: firstDefinedValue(row.ACz, ''),
-                    OPC: row.OPC ?? '',
-                    ACC: row.ACC ?? '',
-                    KPo: firstDefinedValue(row.KPo, row.PKP),
-                    KPv: firstDefinedValue(row.KPv, ''),
-                    KPz: firstDefinedValue(row.KPz, ''),
-                    PPPo: firstDefinedValue(row.PPPo, row.PPP),
-                    PPPv: firstDefinedValue(row.PPPv, ''),
-                    PPPz: firstDefinedValue(row.PPPz, ''),
-                    NPo: firstDefinedValue(row.NPo, row.No),
-                    NPv: firstDefinedValue(row.NPv, row.Nv),
-                    NPz: firstDefinedValue(row.NPz, row.Nz),
-                    NOA: row.NOA ?? '',
-                    NAo: firstDefinedValue(row.NAo, row.NAP),
-                    NAv: firstDefinedValue(row.NAv, ''),
-                    NAz: firstDefinedValue(row.NAz, ''),
-                    PNo: firstDefinedValue(row.PNo, ''),
-                    PNv: firstDefinedValue(row.PNv, ''),
-                    PNz: firstDefinedValue(row.PNz, ''),
-                    Po: firstDefinedValue(row.Po, ''),
-                    Pv: firstDefinedValue(row.Pv, ''),
-                    Pz: firstDefinedValue(row.Pz, ''),
-                    DIo: firstDefinedValue(row.DIo, row.DI),
-                    DIv: firstDefinedValue(row.DIv, ''),
-                    DIz: firstDefinedValue(row.DIz, ''),
-                    k: firstDefinedValue(row.k, row.K, 3),
-                    UT: row.UT ?? '',
-                    DO: row.DO ?? '',
-                    N: row.N ?? '',
-                    Npr: row.Npr ?? '',
-                    VO: row.VO ?? '',
-                    PO: row.PO ?? '',
-                    B33: firstDefinedValue(row.B33_o, row.B33_0),
-                    Io: row.Io ?? '',
-                    Iv: row.Iv ?? '',
-                    Iz: row.Iz ?? '',
-                    No: row.No ?? '',
-                    Nv: row.Nv ?? '',
-                    Nz: row.Nz ?? '',
-                    DI: firstDefinedValue(row.DI, row.DIo),
-                    B11: firstDefinedValue(row.B11, row.b11),
-                    B12: firstDefinedValue(row.B12, row.b12),
-                    B13: firstDefinedValue(row.B13, row.b13),
-                    B21: firstDefinedValue(row.B21, row.b21),
-                    B22: firstDefinedValue(row.B22, row.b22),
-                    B23: firstDefinedValue(row.B23, row.b23),
-                    B24: firstDefinedValue(row.B24, row.b24),
-                    B25: firstDefinedValue(row.B25, row.b25),
-                    B26: firstDefinedValue(row.B26, row.b26),
-                    B31: firstDefinedValue(row.B31, row.b31),
-                    B32: firstDefinedValue(row.B32, row.b32),
-                    B33Result: firstDefinedValue(row.B33Result, row.B33, row.b33),
-                    B34: firstDefinedValue(row.B34, row.b34),
-                    B41: firstDefinedValue(row.B41, row.b41),
-                    B42: firstDefinedValue(row.B42, row.b42),
-                    B43: firstDefinedValue(row.B43, row.b43),
-                    B44: firstDefinedValue(row.B44, row.b44),
-                    KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.KI),
-                };
-
-                const dynamicYears = yearsByK(getKYears(map[row.year]));
-                for (const y of dynamicYears) {
-                    map[row.year][`CHPSi${y}`] = firstDefinedValue(row[`CHPSi${y}`], row[`ЧПСi${y}`], row[`CPSi${y}`]);
-                    map[row.year][`CHPi${y}`] = firstDefinedValue(row[`CHPi${y}`], row[`ЧПi${y}`], row[`CPi${y}`]);
-                    map[row.year][`CHOSi${y}`] = firstDefinedValue(row[`CHOSi${y}`], row[`ЧОСi${y}`], row[`COSi${y}`]);
-                    map[row.year][`CHOi${y}`] = firstDefinedValue(row[`CHOi${y}`], row[`ЧОi${y}`], row[`COi${y}`]);
-                }
-                for (const y of yearsByKFrom(2023, getKYears(map[row.year]))) {
-                    map[row.year][`NR${y}`] = firstDefinedValue(row[`NR${y}`]);
-                }
-                for (const y of yearsByKFrom(2022, getKYears(map[row.year]))) {
-                    map[row.year][`WL${y}`] = firstDefinedValue(row[`WL${y}`]);
-                    map[row.year][`NPR${y}`] = firstDefinedValue(row[`NPR${y}`]);
-                    map[row.year][`DN${y}`] = firstDefinedValue(row[`DN${y}`]);
-                    map[row.year][`OD${y}`] = firstDefinedValue(row[`OD${y}`]);
-                    map[row.year][`NO${y}`] = firstDefinedValue(row[`NO${y}`], row[`No${y}`]);
-                    map[row.year][`NV${y}`] = firstDefinedValue(row[`NV${y}`], row[`Nv${y}`]);
-                    map[row.year][`NZ${y}`] = firstDefinedValue(row[`NZ${y}`], row[`Nz${y}`]);
-                    map[row.year][`NOA${y}`] = firstDefinedValue(row[`NOA${y}`], row[`Noa${y}`]);
-                }
-            }
-
-            if (mBlock && Array.isArray(mBlock.data)) {
-                for (const row of mBlock.data) {
-                    if (!row.year) continue;
-                    ys.push(row.year);
-                    mapM[row.year] = {
-                        k: firstDefinedValue(row.k, row.K, 3),
-                        ZMD: row.ZMD ?? '',
-                        ZM: row.ZM ?? '',
-                        CHZ: row.CHZ ?? '',
-                        ZPK: row.ZPK ?? '',
-                        MDP: row.MDP ?? '',
-                        PRF: firstDefinedValue(row.PRF, row.M14_PRF),
-                        KCO: firstDefinedValue(row.KCO, row.KTSO, row.M14_KCO),
-                        M21_poa: firstDefinedValue(row.M21_poa, row.M21_o, row.M21_raw),
-                        M21_licensed: firstDefinedValue(row.M21_licensed),
-                        M22_NMo: firstDefinedValue(row.M22_NMo),
-                        M22_NMv: firstDefinedValue(row.M22_NMv),
-                        M22_NMz: firstDefinedValue(row.M22_NMz),
-                        M22_ACo: firstDefinedValue(row.M22_ACo),
-                        M22_ACv: firstDefinedValue(row.M22_ACv),
-                        M22_ACz: firstDefinedValue(row.M22_ACz),
-                        M22_OPC: firstDefinedValue(row.M22_OPC),
-                        M22_ACC: firstDefinedValue(row.M22_ACC),
-                        M23_No: firstDefinedValue(row.M23_No),
-                        M23_Nv: firstDefinedValue(row.M23_Nv),
-                        M23_Nz: firstDefinedValue(row.M23_Nz),
-                        M23_KPo: firstDefinedValue(row.M23_KPo),
-                        M23_KPv: firstDefinedValue(row.M23_KPv),
-                        M23_KPz: firstDefinedValue(row.M23_KPz),
-                        M23_PPPo: firstDefinedValue(row.M23_PPPo),
-                        M23_PPPv: firstDefinedValue(row.M23_PPPv),
-                        M23_PPPz: firstDefinedValue(row.M23_PPPz),
-                        M23_NOA: firstDefinedValue(row.M23_NOA),
-                        M24_NAP: firstDefinedValue(row.M24_NAP),
-                        M24_PN: firstDefinedValue(row.M24_PN),
-                        M24_o: firstDefinedValue(row.M24_o, row.M24_raw),
-                        M25_BPo: firstDefinedValue(row.M25_BPo, row.BPo),
-                        M25_BPv: firstDefinedValue(row.M25_BPv, row.BPv),
-                        M25_BPz: firstDefinedValue(row.M25_BPz, row.BPz),
-                        M25_CPo: firstDefinedValue(row.M25_CPo, row.CPo),
-                        M25_CPv: firstDefinedValue(row.M25_CPv, row.CPv),
-                        M25_CPz: firstDefinedValue(row.M25_CPz, row.CPz),
-                        M25_NMo: firstDefinedValue(row.M25_NMo, row.NMo),
-                        M25_NMv: firstDefinedValue(row.M25_NMv, row.NMv),
-                        M25_NMz: firstDefinedValue(row.M25_NMz, row.NMz),
-                        M26_CHPSi2022: firstDefinedValue(row.M26_CHPSi2022, row.CHPSi2022),
-                        M26_CHPi2022: firstDefinedValue(row.M26_CHPi2022, row.CHPi2022),
-                        M26_CHPSi2023: firstDefinedValue(row.M26_CHPSi2023, row.CHPSi2023),
-                        M26_CHPi2023: firstDefinedValue(row.M26_CHPi2023, row.CHPi2023),
-                        M26_CHPSi2024: firstDefinedValue(row.M26_CHPSi2024, row.CHPSi2024),
-                        M26_CHPi2024: firstDefinedValue(row.M26_CHPi2024, row.CHPi2024),
-                        M27_CHOSi2022: firstDefinedValue(row.M27_CHOSi2022, row.CHOSi2022),
-                        M27_CHOi2022: firstDefinedValue(row.M27_CHOi2022, row.CHOi2022),
-                        M27_CHOSi2023: firstDefinedValue(row.M27_CHOSi2023, row.CHOSi2023),
-                        M27_CHOi2023: firstDefinedValue(row.M27_CHOi2023, row.CHOi2023),
-                        M27_CHOSi2024: firstDefinedValue(row.M27_CHOSi2024, row.CHOSi2024),
-                        M27_CHOi2024: firstDefinedValue(row.M27_CHOi2024, row.CHOi2024),
-                        M22_o: firstDefinedValue(row.M22_o, row.M22_raw),
-                        M23_o: firstDefinedValue(row.M23_o, row.M23_raw),
-                        M31_o: firstDefinedValue(row.M31_o, row.M31_raw),
-                        N: row.N ?? '',
-                        Npr: row.Npr ?? '',
-                        VO: row.VO ?? '',
-                        PO: row.PO ?? '',
-                        NR2023: row.NR2023 ?? '',
-                        NR2024: row.NR2024 ?? '',
-                        NR2025: row.NR2025 ?? '',
-                        WL2022: row.WL2022 ?? '',
-                        WL2023: row.WL2023 ?? '',
-                        WL2024: row.WL2024 ?? '',
-                        NPR2022: row.NPR2022 ?? '',
-                        NPR2023: row.NPR2023 ?? '',
-                        NPR2024: row.NPR2024 ?? '',
-                        DN2022: row.DN2022 ?? '',
-                        DN2023: row.DN2023 ?? '',
-                        DN2024: row.DN2024 ?? '',
-                        Io: row.Io ?? '',
-                        Iv: row.Iv ?? '',
-                        Iz: row.Iz ?? '',
-                        No: row.No ?? '',
-                        Nv: row.Nv ?? '',
-                        Nz: row.Nz ?? '',
-                        OD2022: row.OD2022 ?? '',
-                        OD2023: row.OD2023 ?? '',
-                        OD2024: row.OD2024 ?? '',
-                        NO2022: firstDefinedValue(row.NO2022, row.No2022),
-                        NV2022: firstDefinedValue(row.NV2022, row.Nv2022),
-                        NZ2022: firstDefinedValue(row.NZ2022, row.Nz2022),
-                        NOA2022: firstDefinedValue(row.NOA2022, row.Noa2022),
-                        NO2023: firstDefinedValue(row.NO2023, row.No2023),
-                        NV2023: firstDefinedValue(row.NV2023, row.Nv2023),
-                        NZ2023: firstDefinedValue(row.NZ2023, row.Nz2023),
-                        NOA2023: firstDefinedValue(row.NOA2023, row.Noa2023),
-                        NO2024: firstDefinedValue(row.NO2024, row.No2024),
-                        NV2024: firstDefinedValue(row.NV2024, row.Nv2024),
-                        NZ2024: firstDefinedValue(row.NZ2024, row.Nz2024),
-                        NOA2024: firstDefinedValue(row.NOA2024, row.Noa2024),
-                        KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI),
-                        M11: firstDefinedValue(row.M11, row.m11),
-                        M12: firstDefinedValue(row.M12, row.m12),
-                        M13: firstDefinedValue(row.M13, row.m13),
-                        M14: firstDefinedValue(row.M14, row.m14),
-                        M21: firstDefinedValue(row.M21, row.m21),
-                        M22: firstDefinedValue(row.M22, row.m22),
-                        M23: firstDefinedValue(row.M23, row.m23),
-                        M24: firstDefinedValue(row.M24, row.m24),
-                        M25: firstDefinedValue(row.M25, row.m25),
-                        M26: firstDefinedValue(row.M26, row.m26),
-                        M27: firstDefinedValue(row.M27, row.m27),
-                        M31: firstDefinedValue(row.M31, row.m31, row.M31_o, row.M31_raw),
-                        M32: firstDefinedValue(row.M32, row.m32),
-                        M33: firstDefinedValue(row.M33, row.m33),
-                        M41: firstDefinedValue(row.M41, row.m41),
-                        M42: firstDefinedValue(row.M42, row.m42),
-                        M43: firstDefinedValue(row.M43, row.m43),
-                        M44: firstDefinedValue(row.M44, row.m44),
-                    };
-                }
-            }
-
-            const uniqueYears = [...new Set(ys)].sort((a, b) => a - b);
-            if (!uniqueYears.length) throw new Error('Пустые данные');
-
-            setParamsA(mapA);
-            setParamsB(map);
-            setParamsM(mapM);
-            setYears(uniqueYears);
-            setCurrentYear(uniqueYears[0]);
-
-            const payload = {
-                years: uniqueYears,
-                currentYear: uniqueYears[0],
-                paramsA: mapA,
-                paramsB: map,
-                paramsM: mapM,
-            };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-
-            alert('Импорт выполнен');
-        } catch (err) {
-            alert('Ошибка импорта: ' + err.message);
-        } finally {
-            e.target.value = '';
-        }
-    };
-
     const handleAddYear = (year) => {
         setYears((prev) =>
             prev.includes(year) ? prev.slice().sort((a, b) => a - b) : [...prev, year].sort((a, b) => a - b),
@@ -2286,9 +2456,9 @@ export default function InputPage() {
     const handleCompute = async () => {
         setBusy(true);
         try {
-            const delay = 500;
             const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
             const object = await Api.calcMulti(payload);
+
             const computedClasses = Array.isArray(object?.classes) ? object.classes : [];
 
             const summary = computedClasses
@@ -2345,11 +2515,11 @@ export default function InputPage() {
                 setMetricNames(extractMetricNamesFromResult(fallbackRows[0] || {}));
             }
 
-            toast.success('Расчёт выполнен', {
-                autoClose: delay,
-            });
+            console.log(params)
+            console.log(paramsA)
+            toast.success('Расчёт выполнен', { autoClose: 1000 });
         } catch (err) {
-            alert('Ошибка расчёта: ' + err.message);
+            toast.error('Ошибка расчёта: ' + err.message, { autoClose: 3000 });
         } finally {
             setBusy(false);
         }
