@@ -1173,9 +1173,9 @@ export default function InputPage() {
 
                 setYears(uniqueYears);
                 setCurrentYear(uniqueYears[0]);
-                setParamsA(mapA);
+                if (Object.keys(mapA).length) setParamsA(mapA);
                 setParamsB(map);
-                setParamsM(mapM);
+                if (Object.keys(mapM).length) setParamsM(mapM);
             })
             .catch(() => { })
 
@@ -2222,9 +2222,8 @@ export default function InputPage() {
                     for (const row of data) {
                         const year = row.year;
                         if (cls.classType === 'A') {
-                            setParamsA((prev) => ({
-                                ...prev,
-                                [year]: {
+                            setParamsA((prev) => {
+                                const yearObj = {
                                     ...(prev[year] || {}),
                                     KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.a_ki, row.KI, row.ki, prev[year]?.KI_A ?? ''),
                                     A11: firstDefinedValue(row.A11, row.a11, prev[year]?.A11 ?? ''),
@@ -2238,12 +2237,18 @@ export default function InputPage() {
                                     A35: firstDefinedValue(row.A35, row.a35, prev[year]?.A35 ?? ''),
                                     A36: firstDefinedValue(row.A36, row.a36, prev[year]?.A36 ?? ''),
                                     A37: firstDefinedValue(row.A37, row.a37, prev[year]?.A37 ?? ''),
-                                },
-                            }));
+                                };
+                                for (const key of Object.keys(yearObj)) {
+                                    const v = yearObj[key];
+                                    if (typeof v === 'number' && Number.isFinite(v)) {
+                                        yearObj[key] = Math.round(v * 1000) / 1000;
+                                    }
+                                }
+                                return { ...prev, [year]: yearObj };
+                            });
                         } else if (cls.classType === 'B') {
-                            setParamsB((prev) => ({
-                                ...prev,
-                                [year]: {
+                            setParamsB((prev) => {
+                                const yearObj = {
                                     ...(prev[year] || {}),
                                     KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.b_ki, row.KI, row.ki, prev[year]?.KI_B ?? ''),
                                     B11: firstDefinedValue(row.B11, row.b11, prev[year]?.B11 ?? ''),
@@ -2263,12 +2268,18 @@ export default function InputPage() {
                                     B42: firstDefinedValue(row.B42, row.b42, prev[year]?.B42 ?? ''),
                                     B43: firstDefinedValue(row.B43, row.b43, prev[year]?.B43 ?? ''),
                                     B44: firstDefinedValue(row.B44, row.b44, prev[year]?.B44 ?? ''),
-                                },
-                            }));
+                                };
+                                for (const key of Object.keys(yearObj)) {
+                                    const v = yearObj[key];
+                                    if (typeof v === 'number' && Number.isFinite(v)) {
+                                        yearObj[key] = Math.round(v * 1000) / 1000;
+                                    }
+                                }
+                                return { ...prev, [year]: yearObj };
+                            });
                         } else if (cls.classType === 'M') {
-                            setParamsM((prev) => ({
-                                ...prev,
-                                [year]: {
+                            setParamsM((prev) => {
+                                const yearObj = {
                                     ...(prev[year] || {}),
                                     KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.m_ki, row.KI, row.ki, prev[year]?.KI_M ?? ''),
                                     M11: firstDefinedValue(row.M11, row.m11, prev[year]?.M11 ?? ''),
@@ -2289,8 +2300,15 @@ export default function InputPage() {
                                     M42: firstDefinedValue(row.M42, row.m42, prev[year]?.M42 ?? ''),
                                     M43: firstDefinedValue(row.M43, row.m43, prev[year]?.M43 ?? ''),
                                     M44: firstDefinedValue(row.M44, row.m44, prev[year]?.M44 ?? ''),
-                                },
-                            }));
+                                };
+                                for (const key of Object.keys(yearObj)) {
+                                    const v = yearObj[key];
+                                    if (typeof v === 'number' && Number.isFinite(v)) {
+                                        yearObj[key] = Math.round(v * 1000) / 1000;
+                                    }
+                                }
+                                return { ...prev, [year]: yearObj };
+                            });
                         }
                     }
                 }
