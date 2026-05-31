@@ -79,14 +79,16 @@ export default function LineGraphBlock({ rows, classType = 'B' }) {
 
     if (actuals.length >= 2) {
         const maxYear = Math.max(...actuals.map((p) => p.year));
+        const lastActualValue = actuals[actuals.length - 1].total;
         for (let i = 1; i <= FORECAST_YEARS; i++) {
             const fy = maxYear + i;
             const base = projectValue(fy, slope, intercept);
+            const spread = Math.max(stddev, Math.abs(base) * 0.1, Math.abs(lastActualValue) * 0.05, 0.5);
             forecastData.push({
                 year: fy,
                 stable: base,
-                best: base + (stddev || base * 0.05),
-                worst: Math.max(0, base - (stddev || base * 0.05)),
+                best: base + spread,
+                worst: Math.max(0, base - spread),
             });
         }
     }
