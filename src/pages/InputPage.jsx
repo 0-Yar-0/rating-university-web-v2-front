@@ -22,6 +22,7 @@ const B25_B26_START_YEAR = 2022;
 const STORAGE_KEY = 'unirating_b_params_v2';
 const STORAGE_KEY_ITERATION = 'selected_iteration';
 const STORAGE_KEY_INPUT_MODE = 'b_input_mode';
+const STORAGE_KEY_METRIC_NAMES = 'unirating_metric_names';
 
 const METRIC_EXCLUDE_KEYS = new Set([
     'year',
@@ -808,7 +809,16 @@ export default function InputPage() {
 
     // ---------------- For Analytics.jsx ----------------
     const [rows, setRows] = useState([]);
-    const [metricNames, setMetricNames] = useState(DEFAULT_METRIC_NAMES);
+    const [metricNames, setMetricNames] = useState(() => {
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY_METRIC_NAMES);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                return { ...DEFAULT_METRIC_NAMES, ...parsed };
+            }
+        } catch (_) {}
+        return DEFAULT_METRIC_NAMES;
+    });
     const [calcSummary, setCalcSummary] = useState([]);
     const [historyClasses, setHistoryClasses] = useState([]);
     const [selectedAnalyticsClass, setSelectedAnalyticsClass] = useState('B');
@@ -1193,9 +1203,9 @@ export default function InputPage() {
             results = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
 
             const firstRes = results[0] || {};
-            setMetricNames(extractMetricNamesFromResult(firstRes));
+            setMetricNames((prev) => ({ ...prev, ...extractMetricNamesFromResult(firstRes) }));
         } else {
-            setMetricNames({ ...DEFAULT_METRIC_NAMES });
+            setMetricNames((prev) => ({ ...prev, ...DEFAULT_METRIC_NAMES }));
         }
 
         setRows(Array.isArray(results) ? results : []);
@@ -1213,6 +1223,10 @@ export default function InputPage() {
             return next;
         });
     }, [rows]);
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_METRIC_NAMES, JSON.stringify(metricNames));
+    }, [metricNames]);
 
     // ---------------- 2. Автосохранение ----------------
     useEffect(() => {
@@ -2072,499 +2086,208 @@ export default function InputPage() {
         doc.save(`unirating-full-report-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`);
     };
 
-    const handleFillWithDefaults = () => {
+    const handleFillWithDefaults = async () => {
         const uniqueYears = [...new Set([...years, 2025, 2026])].sort((a, b) => b - a);
 
         setCurrentYear(2026)
         setYears(uniqueYears)
 
+        const baseA = {
+            PNo: 0, PNv: 0, PNz: 0,
+            DIo: 0, DIv: 0, DIz: 0,
+            PRF: 12, KCO: 12, ZKN: 2, CHVA: 2.02, CHPA: 2.94,
+            CZ: 0, CV: 0, A23RF: 0.56,
+            sumPoints: null, k: 3,
+            WL2022: 60, WL2023: 70, WL2024: 70,
+            NPR2022: 270.1, NPR2023: 278.9, NPR2024: 278.5,
+            DN2022: 38567.4, DN2023: 96735.9, DN2024: 483281.1,
+            RDN2022: 24155, RDN2023: 83435.9, RDN2024: 460306.2,
+            IA2022: 0, IA2023: 0, IA2024: 0,
+            ASP2022: 28, ASP2023: 48, ASP2024: 99,
+            OD2022: 760316, OD2023: 870778.8, OD2024: 1348285.7,
+            PFN: 0, ASO: 12,
+        };
+        const defA2025 = { ...baseA, DS: 1 };
+        const defA2026 = { ...baseA, DS: 0 };
+
+        const baseB = {
+            ENa: 0, ENb: 203, ENc: 14, Eb: 71.6, Ec: 61.9,
+            beta121: 660, beta122: 660, beta131: 15, beta132: 266,
+            beta212: 2,
+            NBo: 907, NBv: 0, NBz: 345, NMo: 78, NMv: 0, NMz: 13,
+            ACo: 11.8, ACv: 0, ACz: 0, OPC: 0, ACC: 0,
+            KPo: 397, KPv: 0, KPz: 0, PPPo: 0, PPPv: 0, PPPz: 0,
+            NPo: 1033, NPv: 0, NPz: 400, NOA: 0,
+            NAo: 32, NAv: 0, NAz: 3,
+            PNo: 907, PNv: 0, PNz: 345,
+            Po: 907, Pv: 0, Pz: 345,
+            k: 3, UT: 147, DO: 197,
+            N: 1250, Npr: 1195, VO: 200, PO: 362,
+            B33_o: 9.92, B33: null,
+            Io: 47, Iv: 8, Iz: 10,
+            No: 3296, Nv: 240, Nz: 1412,
+            DI: 19, DIo: 19, DIv: 0, DIz: 3,
+            NR2023: 0, NR2024: 0, NR2025: 0.95,
+            WL2022: 60, NPR2022: 270.1, DN2022: 38567.4, OD2022: 760316,
+            NO2022: 3320, NV2022: 128, NZ2022: 1687, NOA2022: 0,
+            WL2023: 70, NPR2023: 278.9, DN2023: 96735.9, OD2023: 870778.8,
+            NO2023: 3369, NV2023: 193, NZ2023: 1527, NOA2023: 0,
+            WL2024: 70, NPR2024: 278.5, DN2024: 483281.1, OD2024: 1348285.7,
+            NO2024: 3296, NV2024: 240, NZ2024: 1412, NOA2024: 0,
+            CHPSi2022: 1, CHPi2022: 51, CHOSi2022: 63, CHOi2022: 4183,
+            CHPSi2023: 2, CHPi2023: 53, CHOSi2023: 34, CHOi2023: 4098,
+            CHPSi2024: 2, CHPi2024: 47, CHOSi2024: 31, CHOi2024: 4028,
+        };
+        const defB2025 = { ...baseB, beta211: 1 };
+        const defB2026 = { ...baseB, beta211: 0 };
+
+        const baseM = {
+            k: 3, ZMD: 24, ZM: 140, CHZ: 87, ZPK: 39, MDP: 26,
+            PRF: 74, KCO: 74,
+            M21_poa: 1, M21_licensed: 1,
+            M22_NMo: 78, M22_NMv: 0, M22_NMz: 13,
+            M22_ACo: 11.82, M22_ACv: 0, M22_ACz: 0,
+            M22_OPC: 0, M22_ACC: 0,
+            M23_No: 1033, M23_Nv: 0, M23_Nz: 400,
+            M23_KPo: 397, M23_KPv: 0, M23_KPz: 0,
+            M23_PPPo: 0, M23_PPPv: 0, M23_PPPz: 0,
+            M23_NOA: 0,
+            M24_NAP: 1, M24_PN: 79.3,
+            M25_BPo: 907, M25_BPv: 0, M25_BPz: 345,
+            M25_CPo: 0, M25_CPv: 0, M25_CPz: 0,
+            M25_NMo: 78, M25_NMv: 0, M25_NMz: 13,
+            M26_CHPi2022: 25,
+            M26_CHPSi2023: 1, M26_CHPi2023: 22,
+            M26_CHPSi2024: 1, M26_CHPi2024: 22,
+            M27_CHOSi2022: 14, M27_CHOi2022: 613,
+            M27_CHOSi2023: 13, M27_CHOi2023: 652,
+            M27_CHOSi2024: 6, M27_CHOi2024: 581,
+            M21_o: 1, M22_o: 0.14905422446406053,
+            M23_o: 0.09249767008387698, M24_o: 0.012610340479192938,
+            M31_o: 5.5904,
+            N: 91, Npr: 92, VO: 16, PO: 39,
+            NR2023: 0, NR2024: 0, NR2025: 0.87,
+            WL2022: 60, WL2023: 70, WL2024: 70,
+            NPR2022: 270.1, NPR2023: 278.9, NPR2024: 278.5,
+            DN2022: 38567.4, DN2023: 96735.9, DN2024: 483281.1,
+            Io: 47, Iv: 8, Iz: 10,
+            No: 3296, Nv: 240, Nz: 1412,
+            OD2022: 760316, OD2023: 870778.8, OD2024: 1348285.7,
+            NO2022: 3320, NV2022: 128, NZ2022: 1687, NOA2022: 0,
+            NO2023: 3369, NV2023: 193, NZ2023: 1527, NOA2023: 0,
+            NO2024: 3296, NV2024: 240, NZ2024: 1412, NOA2024: 0,
+        };
+        const defM2025 = { ...baseM, M26_CHPSi2022: 2 };
+        const defM2026 = { ...baseM, M26_CHPSi2022: 1 };
+
         setParamsA((state) => ({
             ...state,
-            [2025]: {
-                "PNo": 0,
-                "PNv": 0,
-                "PNz": 0,
-                "DIo": 0,
-                "DIv": 0,
-                "DIz": 0,
-                "PRF": 12,
-                "KCO": 12,
-                "ZKN": 2,
-                "CHVA": 2.02,
-                "CHPA": 2.94,
-                "CZ": 0,
-                "CV": 0,
-                "A23RF": 0.56,
-                "sumPoints": null,
-                "k": 3,
-                "WL2022": 60,
-                "WL2023": 70,
-                "WL2024": 70,
-                "NPR2022": 270.1,
-                "NPR2023": 278.9,
-                "NPR2024": 278.5,
-                "DN2022": 38567.4,
-                "DN2023": 96735.9,
-                "DN2024": 483281.1,
-                "RDN2022": 24155,
-                "RDN2023": 83435.9,
-                "RDN2024": 460306.2,
-                "IA2022": 0,
-                "IA2023": 0,
-                "IA2024": 0,
-                "ASP2022": 28,
-                "ASP2023": 48,
-                "ASP2024": 99,
-                "OD2022": 760316,
-                "OD2023": 870778.8,
-                "OD2024": 1348285.7,
-                "PFN": 0,
-                "ASO": 12,
-                "DS": 1
-            },
-            [2026]: {
-                "PNo": 0,
-                "PNv": 0,
-                "PNz": 0,
-                "DIo": 0,
-                "DIv": 0,
-                "DIz": 0,
-                "PRF": 12,
-                "KCO": 12,
-                "ZKN": 2,
-                "CHVA": 2.02,
-                "CHPA": 2.94,
-                "CZ": 0,
-                "CV": 0,
-                "A23RF": 0.56,
-                "sumPoints": null,
-                "k": 3,
-                "WL2022": 60,
-                "WL2023": 70,
-                "WL2024": 70,
-                "NPR2022": 270.1,
-                "NPR2023": 278.9,
-                "NPR2024": 278.5,
-                "DN2022": 38567.4,
-                "DN2023": 96735.9,
-                "DN2024": 483281.1,
-                "RDN2022": 24155,
-                "RDN2023": 83435.9,
-                "RDN2024": 460306.2,
-                "IA2022": 0,
-                "IA2023": 0,
-                "IA2024": 0,
-                "ASP2022": 28,
-                "ASP2023": 48,
-                "ASP2024": 99,
-                "OD2022": 760316,
-                "OD2023": 870778.8,
-                "OD2024": 1348285.7,
-                "PFN": 0,
-                "ASO": 12,
-                "DS": 0
-            },
+            [2025]: defA2025,
+            [2026]: defA2026,
         }));
 
         setParamsB((state) => ({
             ...state,
-            [2025]: {
-                "ENa": 0,
-                "ENb": 203,
-                "ENc": 14,
-                "Eb": 71.6,
-                "Ec": 61.9,
-                "beta121": 660,
-                "beta122": 660,
-                "beta131": 15,
-                "beta132": 266,
-                "beta211": 1,
-                "beta212": 2,
-                "NBo": 907,
-                "NBv": 0,
-                "NBz": 345,
-                "NMo": 78,
-                "NMv": 0,
-                "NMz": 13,
-                "ACo": 11.8,
-                "ACv": 0,
-                "ACz": 0,
-                "OPC": 0,
-                "ACC": 0,
-                "KPo": 397,
-                "KPv": 0,
-                "KPz": 0,
-                "PPPo": 0,
-                "PPPv": 0,
-                "PPPz": 0,
-                "NPo": 1033,
-                "NPv": 0,
-                "NPz": 400,
-                "NOA": 0,
-                "NAo": 32,
-                "NAv": 0,
-                "NAz": 3,
-                "PNo": 907,
-                "PNv": 0,
-                "PNz": 345,
-                "Po": 907,
-                "Pv": 0,
-                "Pz": 345,
-                "k": 3,
-                "UT": 147,
-                "DO": 197,
-                "N": 1250,
-                "Npr": 1195,
-                "VO": 200,
-                "PO": 362,
-                "B33_o": 9.92,
-                "B33": null,
-                "Io": 47,
-                "Iv": 8,
-                "Iz": 10,
-                "No": 3296,
-                "Nv": 240,
-                "Nz": 1412,
-                "DI": 19,
-                "DIo": 19,
-                "DIv": 0,
-                "DIz": 3,
-                "NR2023": 0,
-                "NR2024": 0,
-                "NR2025": 0.95,
-                "WL2022": 60,
-                "NPR2022": 270.1,
-                "DN2022": 38567.4,
-                "OD2022": 760316,
-                "NO2022": 3320,
-                "NV2022": 128,
-                "NZ2022": 1687,
-                "NOA2022": 0,
-                "WL2023": 70,
-                "NPR2023": 278.9,
-                "DN2023": 96735.9,
-                "OD2023": 870778.8,
-                "NO2023": 3369,
-                "NV2023": 193,
-                "NZ2023": 1527,
-                "NOA2023": 0,
-                "WL2024": 70,
-                "NPR2024": 278.5,
-                "DN2024": 483281.1,
-                "OD2024": 1348285.7,
-                "NO2024": 3296,
-                "NV2024": 240,
-                "NZ2024": 1412,
-                "NOA2024": 0,
-                "CHPSi2022": 1,
-                "CHPi2022": 51,
-                "CHOSi2022": 63,
-                "CHOi2022": 4183,
-                "CHPSi2023": 2,
-                "CHPi2023": 53,
-                "CHOSi2023": 34,
-                "CHOi2023": 4098,
-                "CHPSi2024": 2,
-                "CHPi2024": 47,
-                "CHOSi2024": 31,
-                "CHOi2024": 4028
-            },
-            [2026]: {
-                "ENa": 0,
-                "ENb": 203,
-                "ENc": 14,
-                "Eb": 71.6,
-                "Ec": 61.9,
-                "beta121": 660,
-                "beta122": 660,
-                "beta131": 15,
-                "beta132": 266,
-                "beta211": 0,
-                "beta212": 2,
-                "NBo": 907,
-                "NBv": 0,
-                "NBz": 345,
-                "NMo": 78,
-                "NMv": 0,
-                "NMz": 13,
-                "ACo": 11.8,
-                "ACv": 0,
-                "ACz": 0,
-                "OPC": 0,
-                "ACC": 0,
-                "KPo": 397,
-                "KPv": 0,
-                "KPz": 0,
-                "PPPo": 0,
-                "PPPv": 0,
-                "PPPz": 0,
-                "NPo": 1033,
-                "NPv": 0,
-                "NPz": 400,
-                "NOA": 0,
-                "NAo": 32,
-                "NAv": 0,
-                "NAz": 3,
-                "PNo": 907,
-                "PNv": 0,
-                "PNz": 345,
-                "Po": 907,
-                "Pv": 0,
-                "Pz": 345,
-                "k": 3,
-                "UT": 147,
-                "DO": 197,
-                "N": 1250,
-                "Npr": 1195,
-                "VO": 200,
-                "PO": 362,
-                "B33_o": 9.92,
-                "B33": null,
-                "Io": 47,
-                "Iv": 8,
-                "Iz": 10,
-                "No": 3296,
-                "Nv": 240,
-                "Nz": 1412,
-                "DI": 19,
-                "DIo": 19,
-                "DIv": 0,
-                "DIz": 3,
-                "NR2023": 0,
-                "NR2024": 0,
-                "NR2025": 0.95,
-                "WL2022": 60,
-                "NPR2022": 270.1,
-                "DN2022": 38567.4,
-                "OD2022": 760316,
-                "NO2022": 3320,
-                "NV2022": 128,
-                "NZ2022": 1687,
-                "NOA2022": 0,
-                "WL2023": 70,
-                "NPR2023": 278.9,
-                "DN2023": 96735.9,
-                "OD2023": 870778.8,
-                "NO2023": 3369,
-                "NV2023": 193,
-                "NZ2023": 1527,
-                "NOA2023": 0,
-                "WL2024": 70,
-                "NPR2024": 278.5,
-                "DN2024": 483281.1,
-                "OD2024": 1348285.7,
-                "NO2024": 3296,
-                "NV2024": 240,
-                "NZ2024": 1412,
-                "NOA2024": 0,
-                "CHPSi2022": 1,
-                "CHPi2022": 51,
-                "CHOSi2022": 63,
-                "CHOi2022": 4183,
-                "CHPSi2023": 2,
-                "CHPi2023": 53,
-                "CHOSi2023": 34,
-                "CHOi2023": 4098,
-                "CHPSi2024": 2,
-                "CHPi2024": 47,
-                "CHOSi2024": 31,
-                "CHOi2024": 4028
-            },
+            [2025]: defB2025,
+            [2026]: defB2026,
         }));
 
         setParamsM((state) => ({
             ...state,
-            [2025]: {
-                "k": 3,
-                "ZMD": 24,
-                "ZM": 140,
-                "CHZ": 87,
-                "ZPK": 39,
-                "MDP": 26,
-                "PRF": 74,
-                "KCO": 74,
-                "M21_poa": 1,
-                "M21_licensed": 1,
-                "M22_NMo": 78,
-                "M22_NMv": 0,
-                "M22_NMz": 13,
-                "M22_ACo": 11.82,
-                "M22_ACv": 0,
-                "M22_ACz": 0,
-                "M22_OPC": 0,
-                "M22_ACC": 0,
-                "M23_No": 1033,
-                "M23_Nv": 0,
-                "M23_Nz": 400,
-                "M23_KPo": 397,
-                "M23_KPv": 0,
-                "M23_KPz": 0,
-                "M23_PPPo": 0,
-                "M23_PPPv": 0,
-                "M23_PPPz": 0,
-                "M23_NOA": 0,
-                "M24_NAP": 1,
-                "M24_PN": 79.3,
-                "M25_BPo": 907,
-                "M25_BPv": 0,
-                "M25_BPz": 345,
-                "M25_CPo": 0,
-                "M25_CPv": 0,
-                "M25_CPz": 0,
-                "M25_NMo": 78,
-                "M25_NMv": 0,
-                "M25_NMz": 13,
-                "M26_CHPSi2022": 2,
-                "M26_CHPi2022": 25,
-                "M26_CHPSi2023": 1,
-                "M26_CHPi2023": 22,
-                "M26_CHPSi2024": 1,
-                "M26_CHPi2024": 22,
-                "M27_CHOSi2022": 14,
-                "M27_CHOi2022": 613,
-                "M27_CHOSi2023": 13,
-                "M27_CHOi2023": 652,
-                "M27_CHOSi2024": 6,
-                "M27_CHOi2024": 581,
-                "M21_o": 1,
-                "M22_o": 0.14905422446406053,
-                "M23_o": 0.09249767008387698,
-                "M24_o": 0.012610340479192938,
-                "M31_o": 5.5904,
-                "N": 91,
-                "Npr": 92,
-                "VO": 16,
-                "PO": 39,
-                "NR2023": 0,
-                "NR2024": 0,
-                "NR2025": 0.87,
-                "WL2022": 60,
-                "WL2023": 70,
-                "WL2024": 70,
-                "NPR2022": 270.1,
-                "NPR2023": 278.9,
-                "NPR2024": 278.5,
-                "DN2022": 38567.4,
-                "DN2023": 96735.9,
-                "DN2024": 483281.1,
-                "Io": 47,
-                "Iv": 8,
-                "Iz": 10,
-                "No": 3296,
-                "Nv": 240,
-                "Nz": 1412,
-                "OD2022": 760316,
-                "OD2023": 870778.8,
-                "OD2024": 1348285.7,
-                "NO2022": 3320,
-                "NV2022": 128,
-                "NZ2022": 1687,
-                "NOA2022": 0,
-                "NO2023": 3369,
-                "NV2023": 193,
-                "NZ2023": 1527,
-                "NOA2023": 0,
-                "NO2024": 3296,
-                "NV2024": 240,
-                "NZ2024": 1412,
-                "NOA2024": 0
-            },
-            [2026]: {
-                "k": 3,
-                "ZMD": 24,
-                "ZM": 140,
-                "CHZ": 87,
-                "ZPK": 39,
-                "MDP": 26,
-                "PRF": 74,
-                "KCO": 74,
-                "M21_poa": 1,
-                "M21_licensed": 1,
-                "M22_NMo": 78,
-                "M22_NMv": 0,
-                "M22_NMz": 13,
-                "M22_ACo": 11.82,
-                "M22_ACv": 0,
-                "M22_ACz": 0,
-                "M22_OPC": 0,
-                "M22_ACC": 0,
-                "M23_No": 1033,
-                "M23_Nv": 0,
-                "M23_Nz": 400,
-                "M23_KPo": 397,
-                "M23_KPv": 0,
-                "M23_KPz": 0,
-                "M23_PPPo": 0,
-                "M23_PPPv": 0,
-                "M23_PPPz": 0,
-                "M23_NOA": 0,
-                "M24_NAP": 1,
-                "M24_PN": 79.3,
-                "M25_BPo": 907,
-                "M25_BPv": 0,
-                "M25_BPz": 345,
-                "M25_CPo": 0,
-                "M25_CPv": 0,
-                "M25_CPz": 0,
-                "M25_NMo": 78,
-                "M25_NMv": 0,
-                "M25_NMz": 13,
-                "M26_CHPSi2022": 1,
-                "M26_CHPi2022": 25,
-                "M26_CHPSi2023": 1,
-                "M26_CHPi2023": 22,
-                "M26_CHPSi2024": 1,
-                "M26_CHPi2024": 22,
-                "M27_CHOSi2022": 14,
-                "M27_CHOi2022": 613,
-                "M27_CHOSi2023": 13,
-                "M27_CHOi2023": 652,
-                "M27_CHOSi2024": 6,
-                "M27_CHOi2024": 581,
-                "M21_o": 1,
-                "M22_o": 0.14905422446406053,
-                "M23_o": 0.09249767008387698,
-                "M24_o": 0.012610340479192938,
-                "M31_o": 5.5904,
-                "N": 91,
-                "Npr": 92,
-                "VO": 16,
-                "PO": 39,
-                "NR2023": 0,
-                "NR2024": 0,
-                "NR2025": 0.87,
-                "WL2022": 60,
-                "WL2023": 70,
-                "WL2024": 70,
-                "NPR2022": 270.1,
-                "NPR2023": 278.9,
-                "NPR2024": 278.5,
-                "DN2022": 38567.4,
-                "DN2023": 96735.9,
-                "DN2024": 483281.1,
-                "Io": 47,
-                "Iv": 8,
-                "Iz": 10,
-                "No": 3296,
-                "Nv": 240,
-                "Nz": 1412,
-                "OD2022": 760316,
-                "OD2023": 870778.8,
-                "OD2024": 1348285.7,
-                "NO2022": 3320,
-                "NV2022": 128,
-                "NZ2022": 1687,
-                "NOA2022": 0,
-                "NO2023": 3369,
-                "NV2023": 193,
-                "NZ2023": 1527,
-                "NOA2023": 0,
-                "NO2024": 3296,
-                "NV2024": 240,
-                "NZ2024": 1412,
-                "NOA2024": 0
-            },
+            [2025]: defM2025,
+            [2026]: defM2026,
         }));
+
+        if (inputMode === 'totals') {
+            try {
+                const aMap = { 2025: defA2025, 2026: defA2026 };
+                const bMap = { 2025: defB2025, 2026: defB2026 };
+                const mMap = { 2025: defM2025, 2026: defM2026 };
+                const payload = buildExportPayload(uniqueYears, aMap, bMap, mMap, 'metrics');
+                const result = await Api.calcMulti(payload);
+                const calcClasses = Array.isArray(result?.classes) ? result.classes : [];
+
+                for (const cls of calcClasses) {
+                    const data = Array.isArray(cls.data) ? cls.data : [];
+                    for (const row of data) {
+                        const year = row.year;
+                        if (cls.classType === 'A') {
+                            setParamsA((prev) => ({
+                                ...prev,
+                                [year]: {
+                                    ...(prev[year] || {}),
+                                    KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.KI, prev[year]?.KI_A ?? ''),
+                                    A11: firstDefinedValue(row.A11, prev[year]?.A11 ?? ''),
+                                    A21: firstDefinedValue(row.A21, prev[year]?.A21 ?? ''),
+                                    A22: firstDefinedValue(row.A22, prev[year]?.A22 ?? ''),
+                                    A23: firstDefinedValue(row.A23, prev[year]?.A23 ?? ''),
+                                    A31: firstDefinedValue(row.A31, prev[year]?.A31 ?? ''),
+                                    A32: firstDefinedValue(row.A32, prev[year]?.A32 ?? ''),
+                                    A33: firstDefinedValue(row.A33, prev[year]?.A33 ?? ''),
+                                    A34: firstDefinedValue(row.A34, prev[year]?.A34 ?? ''),
+                                    A35: firstDefinedValue(row.A35, prev[year]?.A35 ?? ''),
+                                    A36: firstDefinedValue(row.A36, prev[year]?.A36 ?? ''),
+                                    A37: firstDefinedValue(row.A37, prev[year]?.A37 ?? ''),
+                                },
+                            }));
+                        } else if (cls.classType === 'B') {
+                            setParamsB((prev) => ({
+                                ...prev,
+                                [year]: {
+                                    ...(prev[year] || {}),
+                                    KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.KI, prev[year]?.KI_B ?? ''),
+                                    B11: firstDefinedValue(row.B11, prev[year]?.B11 ?? ''),
+                                    B12: firstDefinedValue(row.B12, prev[year]?.B12 ?? ''),
+                                    B13: firstDefinedValue(row.B13, prev[year]?.B13 ?? ''),
+                                    B21: firstDefinedValue(row.B21, prev[year]?.B21 ?? ''),
+                                    B22: firstDefinedValue(row.B22, prev[year]?.B22 ?? ''),
+                                    B23: firstDefinedValue(row.B23, prev[year]?.B23 ?? ''),
+                                    B24: firstDefinedValue(row.B24, prev[year]?.B24 ?? ''),
+                                    B25: firstDefinedValue(row.B25, prev[year]?.B25 ?? ''),
+                                    B26: firstDefinedValue(row.B26, prev[year]?.B26 ?? ''),
+                                    B31: firstDefinedValue(row.B31, prev[year]?.B31 ?? ''),
+                                    B32: firstDefinedValue(row.B32, prev[year]?.B32 ?? ''),
+                                    B33Result: firstDefinedValue(row.B33Result, row.B33, prev[year]?.B33Result ?? ''),
+                                    B34: firstDefinedValue(row.B34, prev[year]?.B34 ?? ''),
+                                    B41: firstDefinedValue(row.B41, prev[year]?.B41 ?? ''),
+                                    B42: firstDefinedValue(row.B42, prev[year]?.B42 ?? ''),
+                                    B43: firstDefinedValue(row.B43, prev[year]?.B43 ?? ''),
+                                    B44: firstDefinedValue(row.B44, prev[year]?.B44 ?? ''),
+                                },
+                            }));
+                        } else if (cls.classType === 'M') {
+                            setParamsM((prev) => ({
+                                ...prev,
+                                [year]: {
+                                    ...(prev[year] || {}),
+                                    KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI, prev[year]?.KI_M ?? ''),
+                                    M11: firstDefinedValue(row.M11, prev[year]?.M11 ?? ''),
+                                    M12: firstDefinedValue(row.M12, prev[year]?.M12 ?? ''),
+                                    M13: firstDefinedValue(row.M13, prev[year]?.M13 ?? ''),
+                                    M14: firstDefinedValue(row.M14, prev[year]?.M14 ?? ''),
+                                    M21: firstDefinedValue(row.M21, prev[year]?.M21 ?? ''),
+                                    M22: firstDefinedValue(row.M22, prev[year]?.M22 ?? ''),
+                                    M23: firstDefinedValue(row.M23, prev[year]?.M23 ?? ''),
+                                    M24: firstDefinedValue(row.M24, prev[year]?.M24 ?? ''),
+                                    M25: firstDefinedValue(row.M25, prev[year]?.M25 ?? ''),
+                                    M26: firstDefinedValue(row.M26, prev[year]?.M26 ?? ''),
+                                    M27: firstDefinedValue(row.M27, prev[year]?.M27 ?? ''),
+                                    M31: firstDefinedValue(row.M31, prev[year]?.M31 ?? ''),
+                                    M32: firstDefinedValue(row.M32, prev[year]?.M32 ?? ''),
+                                    M33: firstDefinedValue(row.M33, prev[year]?.M33 ?? ''),
+                                    M41: firstDefinedValue(row.M41, prev[year]?.M41 ?? ''),
+                                    M42: firstDefinedValue(row.M42, prev[year]?.M42 ?? ''),
+                                    M43: firstDefinedValue(row.M43, prev[year]?.M43 ?? ''),
+                                    M44: firstDefinedValue(row.M44, prev[year]?.M44 ?? ''),
+                                },
+                            }));
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('Ошибка расчёта итоговых значений:', e);
+            }
+        }
     }
 
     const handleAddYear = (year) => {
@@ -2624,12 +2347,15 @@ export default function InputPage() {
                 localStorage.setItem(STORAGE_KEY_ITERATION, String(iteration));
             }
 
-            const metricNamesDto = buildMetricNamesDto(metricNames, bFirstRow?.calcResultId);
-            if (metricNamesDto) {
-                try {
-                    await Api.updateMetricNames(metricNamesDto);
-                } catch (e) {
-                    console.warn('Ошибка сохранения пользовательских имён после расчёта', e);
+            for (const cls of computedClasses) {
+                const firstRow = Array.isArray(cls.data) ? cls.data[0] : null;
+                const dto = buildMetricNamesDto(metricNames, firstRow?.calcResultId);
+                if (dto) {
+                    try {
+                        await Api.updateMetricNames(dto);
+                    } catch (e) {
+                        console.warn(`Ошибка сохранения имён метрик для ${cls.classType}:`, e);
+                    }
                 }
             }
 
