@@ -193,7 +193,7 @@ export default function RecommendationsBlock({ rows, metricKeys = [], metricName
                                 <div style={getBarStyle(r.pct)} />
                             </div>
                             <div style={{ marginTop: 2, fontSize: '0.85em', color: '#666' }}>
-                                {r.current.toFixed(3)} из {r.max} ({r.pct.toFixed(0)}%)
+                                {r.current.toFixed(3)} из {r.max} ({r.pct.toFixed(3)}%)
                             </div>
                             {r.advice && (
                                 <div style={{ marginTop: 4, fontSize: '0.85em', color: '#333', fontStyle: 'italic' }}>
@@ -226,7 +226,7 @@ export default function RecommendationsBlock({ rows, metricKeys = [], metricName
                                 <div style={getBarStyle(r.pct)} />
                             </div>
                             <div style={{ marginTop: 2, fontSize: '0.85em', color: '#666' }}>
-                                {r.current.toFixed(3)} из {r.max} ({r.pct.toFixed(0)}%)
+                                {r.current.toFixed(3)} из {r.max} ({r.pct.toFixed(3)}%)
                             </div>
                             {r.advice && (
                                 <div style={{ marginTop: 4, fontSize: '0.85em', color: '#333', fontStyle: 'italic' }}>
@@ -251,7 +251,7 @@ export default function RecommendationsBlock({ rows, metricKeys = [], metricName
                             <span key={r.key} style={{
                                 padding: '2px 8px', background: '#dcfce7', borderRadius: 4,
                                 fontSize: '0.85em', cursor: 'pointer',
-                            }} title={`${r.current.toFixed(3)} из ${r.max} (${r.pct.toFixed(0)}%)`}>
+                            }} title={`${r.current.toFixed(3)} из ${r.max} (${r.pct.toFixed(3)}%)`}>
                                 {r.label} ✓
                             </span>
                         ))}

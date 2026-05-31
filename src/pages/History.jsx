@@ -78,7 +78,7 @@ export default function History({ items, setRows, selectedIteration, setSelected
                         <div className="history-summary">
                             {it.results?.map((row) => (
                                 <span key={row.year} className="history-chip">
-                                    {row.year}: {resolveMetricKeys(row).map((k) => `${k.toUpperCase()}=${Number(row[k]).toFixed(2)}`).join(', ')}
+                                    {row.year}: {resolveMetricKeys(row).map((k) => `${k.toUpperCase()}=${Number(row[k]).toFixed(3)}`).join(', ')}
                                 </span>
                             ))}
                         </div>

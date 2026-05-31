@@ -151,7 +151,7 @@ export default function RadarBlock({ rows, metricNames, metricKeys = [], viewMod
                         tickCount={9}
                         tickFormatter={(value) => (viewMode === 'value' ? `${Math.round(value)}` : `${value}%`)}
                     />
-                    <Tooltip formatter={(value) => (viewMode === 'value' ? value : `${Number(value).toFixed(1)}%`)} />
+                    <Tooltip formatter={(value) => (viewMode === 'value' ? value : `${Number(value).toFixed(3)}%`)} />
                     <Legend />
                     {rows.map((r, idx) => (
                         <Radar
