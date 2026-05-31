@@ -3,12 +3,17 @@ import { Api } from '../api';
 import YearPicker from '../components/YearPicker.jsx';
 import ClassList from '../components/ClassList.jsx';
 import ResultsTable from '../components/ResultsTable.jsx';
+import RecommendationsBlock from '../components/RecommendationsBlock.jsx';
 import Analytics from './Analytics.jsx';
 import History from './History.jsx';
 import MenuDropdown from '../components/MenuDropdown.jsx';
 import { DEFAULT_METRIC_NAMES } from '../constants.js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { jsPDF } from 'jspdf';
+import * as XLSX from '@e965/xlsx';
+import html2canvas from 'html2canvas';
+
 const YEAR_NOW = new Date().getFullYear();
 const B25_B26_START_YEAR = 2022;
 const STORAGE_KEY = 'unirating_b_params_v2';
@@ -804,6 +809,7 @@ export default function InputPage() {
     const [selectedAnalyticsClass, setSelectedAnalyticsClass] = useState('B');
 
     // ---------------- For History.jsx ----------------
+    const chartContainerRef = useRef(null);
     const [items, setItems] = useState([]);
     const [selectedIteration, setSelectedIteration] = useState(0);
     const [visibleYears, setVisibleYears] = useState({});
@@ -1355,10 +1361,13 @@ export default function InputPage() {
 
     const handleFileSelected = async (e) => {
         const file = e.target.files?.[0];
+
         if (!file) return;
+
         try {
             const text = await file.text();
             const json = JSON.parse(text);
+
             if (!json || !Array.isArray(json.classes)) throw new Error('Неверный формат JSON');
 
             const aBlock = json.classes.find((c) => c.classType === 'A');
@@ -1683,6 +1692,812 @@ export default function InputPage() {
         }
     };
 
+    const handleExportExcel = () => {
+        const workbook = XLSX.utils.book_new();
+
+        // --- 1. Prepare Input Data (A, B, M) ---
+        const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
+
+        payload.classes.forEach((cls) => {
+            const sheetName = `Inputs_${cls.classType}`;
+
+            const headers = Object.keys(cls.data[0]);
+            const transposedData = headers.map(key => {
+                return [key, ...cls.data.map(row => row[key])];
+            });
+
+            const worksheet = XLSX.utils.aoa_to_sheet(transposedData);
+
+            // Adjust column widths
+            worksheet['!cols'] = [{ wch: 15 }];
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        });
+
+        // // --- 2. Prepare Calculated Results (Rows) ---
+
+        // 2. Export Computed Results (New logic for Results_A, Results_B, Results_M)
+        // We iterate over the historyClasses which contains the computed data per class type
+        historyClasses.forEach((cls) => {
+            const classType = cls.classType;
+
+            // Find the specific iteration results to export (defaulting to latest if not specified)
+            const items = Array.isArray(cls.items) ? cls.items : [];
+            const targetIter = selectedIteration;
+
+            let resultsData = [];
+            if (items.length > 0) {
+                const selectedItem = targetIter
+                    ? items.find((item) => item.iter === targetIter)
+                    : items.reduce((maxItem, item) => (item.iter > maxItem.iter ? item : maxItem));
+
+                resultsData = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
+            }
+
+            if (resultsData.length > 0) {
+                const sheetName = `Results_${classType}`;
+
+                // Get all unique keys, ensuring 'year' is first if it exists
+                const allKeysSet = new Set();
+                resultsData.forEach(row => Object.keys(row).forEach(key => allKeysSet.add(key)));
+                const allKeys = Array.from(allKeysSet);
+                // Sort keys, prioritizing 'year' to be first if present
+                const sortedHeaders = ['year', ...allKeys.filter(k => k !== 'year').sort()];
+
+                // Create transposed array: [[Header1, Val1_Row1, Val1_Row2, ...], [Header2, Val2_Row1, Val2_Row2, ...], ...]
+                const transposedResultsData = sortedHeaders.map(headerKey => {
+                    const row = [headerKey];
+                    resultsData.forEach(originalRow => {
+                        row.push(originalRow[headerKey] ?? '');
+                    });
+                    return row;
+                });
+
+                const worksheet = XLSX.utils.aoa_to_sheet(transposedResultsData);
+
+                // Adjust column widths
+                worksheet['!cols'] = [{ wch: 15 }];
+
+                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+            }
+        })
+
+        // 3. Chart data sheets (for the selected analytics class)
+        if (rows.length && metricKeys.length) {
+            // Radar data: metric labels × years
+            const radarHeaders = ['Метрика', ...rows.map((r) => String(r.year))];
+            const radarRows = metricKeys.map((key) => {
+                const nameKey = `code${key.toUpperCase()}`;
+                const label = metricNames[nameKey] || DEFAULT_METRIC_NAMES[nameKey] || key.toUpperCase();
+                return [label, ...rows.map((r) => r[key] ?? '')];
+            });
+            const radarSheet = XLSX.utils.aoa_to_sheet([radarHeaders, ...radarRows]);
+            radarSheet['!cols'] = [{ wch: 30 }, ...rows.map(() => ({ wch: 15 }))];
+            XLSX.utils.book_append_sheet(workbook, radarSheet, 'ChartData_Radar');
+
+            // Line data: year × total score
+            const TOTAL_KEY_PRIORITY = {
+                A: ['A_TOTAL_WITH_KI', 'A_TOTAL', 'sumA', 'TOTAL'],
+                B: ['B_TOTAL_WITH_KI', 'B_TOTAL', 'sumB', 'TOTAL'],
+                M: ['M_TOTAL_WITH_KI', 'M_TOTAL', 'sumM', 'TOTAL'],
+            };
+            const priority = TOTAL_KEY_PRIORITY[selectedAnalyticsClass] || TOTAL_KEY_PRIORITY.B;
+            const resolveTotal = (row) => {
+                for (const k of priority) {
+                    const v = Number(row?.[k]);
+                    if (Number.isFinite(v)) return v;
+                }
+                return null;
+            };
+            const lineHeaders = ['Год', 'Сумма баллов'];
+            const lineRows = rows
+                .map((r) => [r.year, resolveTotal(r)])
+                .sort((a, b) => Number(a[0]) - Number(b[0]));
+            const lineSheet = XLSX.utils.aoa_to_sheet([lineHeaders, ...lineRows]);
+            lineSheet['!cols'] = [{ wch: 10 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(workbook, lineSheet, 'ChartData_Line');
+        }
+
+        // 4. Trigger Download
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        XLSX.writeFile(workbook, `unirating-full-report-${timestamp}.xlsx`);
+    };
+
+    const handleExportPdf = async () => {
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 10;
+        const colMargin = 5; // Space between columns
+        const lineHeight = 1;
+        const cellPadding = 1; // Internal padding for cells
+
+        let yPos = margin;
+        const timestamp = new Date().toLocaleString('ru-RU');
+
+        // --- Helper Functions ---
+        const checkAndAddPageIfNeeded = (requiredSpace = lineHeight) => {
+            if (yPos + requiredSpace > pageHeight - margin) {
+                doc.addPage();
+                yPos = margin;
+                return true; // Indicate a new page was added
+            }
+            return false;
+        };
+
+        const addTitle = (text) => {
+            checkAndAddPageIfNeeded(10);
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text(text, margin, yPos);
+            yPos += 8;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+        };
+
+        const addSectionHeader = (text) => {
+            checkAndAddPageIfNeeded(8);
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(0, 0, 100); // Dark Blue
+            doc.text(text, margin, yPos);
+            yPos += 6;
+            doc.setDrawColor(200);
+            doc.line(margin, yPos - 2, pageWidth - margin, yPos - 2); // Full line width
+            yPos += 4;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+        };
+
+        const drawTable = (headers, dataRows, tableName) => {
+            addSectionHeader(tableName);
+
+            if (!headers || headers.length === 0 || !dataRows || dataRows.length === 0) {
+                checkAndAddPageIfNeeded();
+                doc.text("No data available.", margin, yPos);
+                yPos += lineHeight;
+                return;
+            }
+
+            const numCols = headers.length;
+            const numDataRows = dataRows.length;
+
+            // Calculate column widths based on content and page width
+            // Assume equal width initially, subtract space for margins/padding
+            const availableWidth = pageWidth - 2 * margin - (numCols + 1) * colMargin;
+            const colWidth = Math.max(15, availableWidth / numCols); // Minimum width of 15 units
+
+            // Font settings for table
+            doc.setFontSize(8);
+            doc.setFont(undefined, 'normal');
+            doc.setFillColor(240, 240, 240); // Light gray for header background
+
+            // Draw Header Row
+            checkAndAddPageIfNeeded(lineHeight + 2 * cellPadding); // Account for header height
+            let currentColX = margin + colMargin;
+
+            // Draw header background
+            doc.rect(currentColX, yPos - lineHeight + 2 * cellPadding, availableWidth, lineHeight, 'F'); // Fill rectangle
+
+            for (let h = 0; h < numCols; h++) {
+                doc.setFont(undefined, 'bold'); // Bold header text
+                const headerText = String(headers[h]).substring(0, 20); // Truncate if too long
+                doc.text(headerText, currentColX + cellPadding, yPos);
+                doc.setFont(undefined, 'normal'); // Reset font for data
+                currentColX += colWidth + colMargin;
+            }
+            yPos += lineHeight + 2 * cellPadding; // Move Y position down after header
+            doc.setFillColor(255, 255, 255); // Reset fill color for data rows
+
+            // Draw Data Rows
+            for (let r = 0; r < numDataRows; r++) {
+                checkAndAddPageIfNeeded(lineHeight + 2 * cellPadding); // Check before drawing row
+                currentColX = margin + colMargin;
+
+                for (let c = 0; c < numCols; c++) {
+                    const cellText = String(dataRows[r][c] ?? '').substring(0, 30); // Truncate data if too long
+                    // Optional: Add borders to cells
+                    // doc.rect(currentColX, yPos - lineHeight + 2*cellPadding, colWidth, lineHeight);
+                    doc.text(cellText, currentColX + cellPadding, yPos);
+                    currentColX += colWidth + colMargin;
+                }
+                yPos += lineHeight + 2 * cellPadding; // Move Y position down after row
+            }
+        };
+        // --- End Helper Functions ---
+
+        // --- 1. Header ---
+        addTitle(`University Rating Report`);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Generated: ${timestamp}`, margin, yPos);
+        yPos += 10;
+
+        // --- 2. Export Input Parameters (A, B, M) ---
+        // This part remains similar to your previous implementation, adapted for helper functions
+        const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
+
+        payload.classes.forEach((cls) => {
+            const inputsSheetName = `Inputs_${cls.classType}`;
+            const headers = Object.keys(cls.data[0]);
+            const transposedData = headers.map(key => {
+                return [key, ...cls.data.map(row => row[key])];
+            });
+
+            drawTable(transposedData[0], transposedData.slice(1), inputsSheetName); // First row is headers, rest are data
+        });
+
+        // --- 3. Export Transposed Calculated Results (Results_A, Results_B, Results_M) ---
+        historyClasses.forEach((cls) => {
+            const classType = cls.classType;
+            const resultsSheetName = `Results_${classType}`;
+
+            // Find the specific iteration results to export (defaulting to latest if not specified)
+            const items = Array.isArray(cls.items) ? cls.items : [];
+            const targetIter = selectedIteration;
+
+            let resultsData = [];
+            if (items.length > 0) {
+                const selectedItem = targetIter
+                    ? items.find((item) => item.iter === targetIter)
+                    : items.reduce((maxItem, item) => (item.iter > maxItem.iter ? item : maxItem));
+
+                resultsData = Array.isArray(selectedItem?.results) ? selectedItem.results : [];
+            }
+
+            if (resultsData.length > 0) {
+                // --- Transpose Logic for Results (Same as Excel) ---
+                const allKeysSet = new Set();
+                resultsData.forEach(row => Object.keys(row).forEach(key => allKeysSet.add(key)));
+                const allKeys = Array.from(allKeysSet);
+                const sortedHeaders = ['year', ...allKeys.filter(k => k !== 'year').sort()];
+
+                const transposedResultsData = sortedHeaders.map(headerKey => {
+                    const row = [headerKey];
+                    resultsData.forEach(originalRow => {
+                        row.push(originalRow[headerKey] ?? '');
+                    });
+                    return row;
+                });
+
+                // Use the drawTable helper for the transposed results
+                const headers = transposedResultsData[0]; // First row contains headers
+                const dataRows = transposedResultsData.slice(1); // Subsequent rows contain data
+                drawTable(headers, dataRows, resultsSheetName);
+            } else {
+                // Optional: Add a section if no results found for a class
+                addSectionHeader(resultsSheetName);
+                checkAndAddPageIfNeeded();
+                doc.text("No calculation results available for this class.", margin, yPos);
+                yPos += lineHeight;
+            }
+        });
+
+        // --- 4. Capture charts and add to PDF ---
+        if (chartContainerRef.current) {
+            const chartElements = chartContainerRef.current.querySelectorAll('[data-chart]');
+            for (const el of chartElements) {
+                try {
+                    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = pageWidth - 2 * margin;
+                    const imgHeight = (canvas.height / canvas.width) * imgWidth;
+
+                    if (yPos + imgHeight + 10 > pageHeight - margin) {
+                        doc.addPage();
+                        yPos = margin;
+                    }
+
+                    const chartType = el.getAttribute('data-chart');
+                    const title = chartType === 'radar' ? 'Паучья диаграмма' : 'Линейный график';
+                    addSectionHeader(title);
+                    doc.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+                    yPos += imgHeight + 10;
+                } catch (e) {
+                    console.warn('Ошибка захвата графика:', e);
+                }
+            }
+        }
+
+        // --- 5. Save PDF ---
+        doc.save(`unirating-full-report-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.pdf`);
+    };
+
+    const handleFillWithDefaults = () => {
+        const uniqueYears = [...new Set([...years, 2025, 2026])].sort((a, b) => b - a);
+
+        setCurrentYear(2026)
+        setYears(uniqueYears)
+
+        setParamsA((state) => ({
+            ...state,
+            [2025]: {
+                "PNo": 0,
+                "PNv": 0,
+                "PNz": 0,
+                "DIo": 0,
+                "DIv": 0,
+                "DIz": 0,
+                "PRF": 12,
+                "KCO": 12,
+                "ZKN": 2,
+                "CHVA": 2.02,
+                "CHPA": 2.94,
+                "CZ": 0,
+                "CV": 0,
+                "A23RF": 0.56,
+                "sumPoints": null,
+                "k": 3,
+                "WL2022": 60,
+                "WL2023": 70,
+                "WL2024": 70,
+                "NPR2022": 270.1,
+                "NPR2023": 278.9,
+                "NPR2024": 278.5,
+                "DN2022": 38567.4,
+                "DN2023": 96735.9,
+                "DN2024": 483281.1,
+                "RDN2022": 24155,
+                "RDN2023": 83435.9,
+                "RDN2024": 460306.2,
+                "IA2022": 0,
+                "IA2023": 0,
+                "IA2024": 0,
+                "ASP2022": 28,
+                "ASP2023": 48,
+                "ASP2024": 99,
+                "OD2022": 760316,
+                "OD2023": 870778.8,
+                "OD2024": 1348285.7,
+                "PFN": 0,
+                "ASO": 12,
+                "DS": 1
+            },
+            [2026]: {
+                "PNo": 0,
+                "PNv": 0,
+                "PNz": 0,
+                "DIo": 0,
+                "DIv": 0,
+                "DIz": 0,
+                "PRF": 12,
+                "KCO": 12,
+                "ZKN": 2,
+                "CHVA": 2.02,
+                "CHPA": 2.94,
+                "CZ": 0,
+                "CV": 0,
+                "A23RF": 0.56,
+                "sumPoints": null,
+                "k": 3,
+                "WL2022": 60,
+                "WL2023": 70,
+                "WL2024": 70,
+                "NPR2022": 270.1,
+                "NPR2023": 278.9,
+                "NPR2024": 278.5,
+                "DN2022": 38567.4,
+                "DN2023": 96735.9,
+                "DN2024": 483281.1,
+                "RDN2022": 24155,
+                "RDN2023": 83435.9,
+                "RDN2024": 460306.2,
+                "IA2022": 0,
+                "IA2023": 0,
+                "IA2024": 0,
+                "ASP2022": 28,
+                "ASP2023": 48,
+                "ASP2024": 99,
+                "OD2022": 760316,
+                "OD2023": 870778.8,
+                "OD2024": 1348285.7,
+                "PFN": 0,
+                "ASO": 12,
+                "DS": 0
+            },
+        }));
+
+        setParamsB((state) => ({
+            ...state,
+            [2025]: {
+                "ENa": 0,
+                "ENb": 203,
+                "ENc": 14,
+                "Eb": 71.6,
+                "Ec": 61.9,
+                "beta121": 660,
+                "beta122": 660,
+                "beta131": 15,
+                "beta132": 266,
+                "beta211": 1,
+                "beta212": 2,
+                "NBo": 907,
+                "NBv": 0,
+                "NBz": 345,
+                "NMo": 78,
+                "NMv": 0,
+                "NMz": 13,
+                "ACo": 11.8,
+                "ACv": 0,
+                "ACz": 0,
+                "OPC": 0,
+                "ACC": 0,
+                "KPo": 397,
+                "KPv": 0,
+                "KPz": 0,
+                "PPPo": 0,
+                "PPPv": 0,
+                "PPPz": 0,
+                "NPo": 1033,
+                "NPv": 0,
+                "NPz": 400,
+                "NOA": 0,
+                "NAo": 32,
+                "NAv": 0,
+                "NAz": 3,
+                "PNo": 907,
+                "PNv": 0,
+                "PNz": 345,
+                "Po": 907,
+                "Pv": 0,
+                "Pz": 345,
+                "k": 3,
+                "UT": 147,
+                "DO": 197,
+                "N": 1250,
+                "Npr": 1195,
+                "VO": 200,
+                "PO": 362,
+                "B33_o": 9.92,
+                "B33": null,
+                "Io": 47,
+                "Iv": 8,
+                "Iz": 10,
+                "No": 3296,
+                "Nv": 240,
+                "Nz": 1412,
+                "DI": 19,
+                "DIo": 19,
+                "DIv": 0,
+                "DIz": 3,
+                "NR2023": 0,
+                "NR2024": 0,
+                "NR2025": 0.95,
+                "WL2022": 60,
+                "NPR2022": 270.1,
+                "DN2022": 38567.4,
+                "OD2022": 760316,
+                "NO2022": 3320,
+                "NV2022": 128,
+                "NZ2022": 1687,
+                "NOA2022": 0,
+                "WL2023": 70,
+                "NPR2023": 278.9,
+                "DN2023": 96735.9,
+                "OD2023": 870778.8,
+                "NO2023": 3369,
+                "NV2023": 193,
+                "NZ2023": 1527,
+                "NOA2023": 0,
+                "WL2024": 70,
+                "NPR2024": 278.5,
+                "DN2024": 483281.1,
+                "OD2024": 1348285.7,
+                "NO2024": 3296,
+                "NV2024": 240,
+                "NZ2024": 1412,
+                "NOA2024": 0,
+                "CHPSi2022": 1,
+                "CHPi2022": 51,
+                "CHOSi2022": 63,
+                "CHOi2022": 4183,
+                "CHPSi2023": 2,
+                "CHPi2023": 53,
+                "CHOSi2023": 34,
+                "CHOi2023": 4098,
+                "CHPSi2024": 2,
+                "CHPi2024": 47,
+                "CHOSi2024": 31,
+                "CHOi2024": 4028
+            },
+            [2026]: {
+                "ENa": 0,
+                "ENb": 203,
+                "ENc": 14,
+                "Eb": 71.6,
+                "Ec": 61.9,
+                "beta121": 660,
+                "beta122": 660,
+                "beta131": 15,
+                "beta132": 266,
+                "beta211": 0,
+                "beta212": 2,
+                "NBo": 907,
+                "NBv": 0,
+                "NBz": 345,
+                "NMo": 78,
+                "NMv": 0,
+                "NMz": 13,
+                "ACo": 11.8,
+                "ACv": 0,
+                "ACz": 0,
+                "OPC": 0,
+                "ACC": 0,
+                "KPo": 397,
+                "KPv": 0,
+                "KPz": 0,
+                "PPPo": 0,
+                "PPPv": 0,
+                "PPPz": 0,
+                "NPo": 1033,
+                "NPv": 0,
+                "NPz": 400,
+                "NOA": 0,
+                "NAo": 32,
+                "NAv": 0,
+                "NAz": 3,
+                "PNo": 907,
+                "PNv": 0,
+                "PNz": 345,
+                "Po": 907,
+                "Pv": 0,
+                "Pz": 345,
+                "k": 3,
+                "UT": 147,
+                "DO": 197,
+                "N": 1250,
+                "Npr": 1195,
+                "VO": 200,
+                "PO": 362,
+                "B33_o": 9.92,
+                "B33": null,
+                "Io": 47,
+                "Iv": 8,
+                "Iz": 10,
+                "No": 3296,
+                "Nv": 240,
+                "Nz": 1412,
+                "DI": 19,
+                "DIo": 19,
+                "DIv": 0,
+                "DIz": 3,
+                "NR2023": 0,
+                "NR2024": 0,
+                "NR2025": 0.95,
+                "WL2022": 60,
+                "NPR2022": 270.1,
+                "DN2022": 38567.4,
+                "OD2022": 760316,
+                "NO2022": 3320,
+                "NV2022": 128,
+                "NZ2022": 1687,
+                "NOA2022": 0,
+                "WL2023": 70,
+                "NPR2023": 278.9,
+                "DN2023": 96735.9,
+                "OD2023": 870778.8,
+                "NO2023": 3369,
+                "NV2023": 193,
+                "NZ2023": 1527,
+                "NOA2023": 0,
+                "WL2024": 70,
+                "NPR2024": 278.5,
+                "DN2024": 483281.1,
+                "OD2024": 1348285.7,
+                "NO2024": 3296,
+                "NV2024": 240,
+                "NZ2024": 1412,
+                "NOA2024": 0,
+                "CHPSi2022": 1,
+                "CHPi2022": 51,
+                "CHOSi2022": 63,
+                "CHOi2022": 4183,
+                "CHPSi2023": 2,
+                "CHPi2023": 53,
+                "CHOSi2023": 34,
+                "CHOi2023": 4098,
+                "CHPSi2024": 2,
+                "CHPi2024": 47,
+                "CHOSi2024": 31,
+                "CHOi2024": 4028
+            },
+        }));
+
+        setParamsM((state) => ({
+            ...state,
+            [2025]: {
+                "k": 3,
+                "ZMD": 24,
+                "ZM": 140,
+                "CHZ": 87,
+                "ZPK": 39,
+                "MDP": 26,
+                "PRF": 74,
+                "KCO": 74,
+                "M21_poa": 1,
+                "M21_licensed": 1,
+                "M22_NMo": 78,
+                "M22_NMv": 0,
+                "M22_NMz": 13,
+                "M22_ACo": 11.82,
+                "M22_ACv": 0,
+                "M22_ACz": 0,
+                "M22_OPC": 0,
+                "M22_ACC": 0,
+                "M23_No": 1033,
+                "M23_Nv": 0,
+                "M23_Nz": 400,
+                "M23_KPo": 397,
+                "M23_KPv": 0,
+                "M23_KPz": 0,
+                "M23_PPPo": 0,
+                "M23_PPPv": 0,
+                "M23_PPPz": 0,
+                "M23_NOA": 0,
+                "M24_NAP": 1,
+                "M24_PN": 79.3,
+                "M25_BPo": 907,
+                "M25_BPv": 0,
+                "M25_BPz": 345,
+                "M25_CPo": 0,
+                "M25_CPv": 0,
+                "M25_CPz": 0,
+                "M25_NMo": 78,
+                "M25_NMv": 0,
+                "M25_NMz": 13,
+                "M26_CHPSi2022": 2,
+                "M26_CHPi2022": 25,
+                "M26_CHPSi2023": 1,
+                "M26_CHPi2023": 22,
+                "M26_CHPSi2024": 1,
+                "M26_CHPi2024": 22,
+                "M27_CHOSi2022": 14,
+                "M27_CHOi2022": 613,
+                "M27_CHOSi2023": 13,
+                "M27_CHOi2023": 652,
+                "M27_CHOSi2024": 6,
+                "M27_CHOi2024": 581,
+                "M21_o": 1,
+                "M22_o": 0.14905422446406053,
+                "M23_o": 0.09249767008387698,
+                "M24_o": 0.012610340479192938,
+                "M31_o": 5.5904,
+                "N": 91,
+                "Npr": 92,
+                "VO": 16,
+                "PO": 39,
+                "NR2023": 0,
+                "NR2024": 0,
+                "NR2025": 0.87,
+                "WL2022": 60,
+                "WL2023": 70,
+                "WL2024": 70,
+                "NPR2022": 270.1,
+                "NPR2023": 278.9,
+                "NPR2024": 278.5,
+                "DN2022": 38567.4,
+                "DN2023": 96735.9,
+                "DN2024": 483281.1,
+                "Io": 47,
+                "Iv": 8,
+                "Iz": 10,
+                "No": 3296,
+                "Nv": 240,
+                "Nz": 1412,
+                "OD2022": 760316,
+                "OD2023": 870778.8,
+                "OD2024": 1348285.7,
+                "NO2022": 3320,
+                "NV2022": 128,
+                "NZ2022": 1687,
+                "NOA2022": 0,
+                "NO2023": 3369,
+                "NV2023": 193,
+                "NZ2023": 1527,
+                "NOA2023": 0,
+                "NO2024": 3296,
+                "NV2024": 240,
+                "NZ2024": 1412,
+                "NOA2024": 0
+            },
+            [2026]: {
+                "k": 3,
+                "ZMD": 24,
+                "ZM": 140,
+                "CHZ": 87,
+                "ZPK": 39,
+                "MDP": 26,
+                "PRF": 74,
+                "KCO": 74,
+                "M21_poa": 1,
+                "M21_licensed": 1,
+                "M22_NMo": 78,
+                "M22_NMv": 0,
+                "M22_NMz": 13,
+                "M22_ACo": 11.82,
+                "M22_ACv": 0,
+                "M22_ACz": 0,
+                "M22_OPC": 0,
+                "M22_ACC": 0,
+                "M23_No": 1033,
+                "M23_Nv": 0,
+                "M23_Nz": 400,
+                "M23_KPo": 397,
+                "M23_KPv": 0,
+                "M23_KPz": 0,
+                "M23_PPPo": 0,
+                "M23_PPPv": 0,
+                "M23_PPPz": 0,
+                "M23_NOA": 0,
+                "M24_NAP": 1,
+                "M24_PN": 79.3,
+                "M25_BPo": 907,
+                "M25_BPv": 0,
+                "M25_BPz": 345,
+                "M25_CPo": 0,
+                "M25_CPv": 0,
+                "M25_CPz": 0,
+                "M25_NMo": 78,
+                "M25_NMv": 0,
+                "M25_NMz": 13,
+                "M26_CHPSi2022": 1,
+                "M26_CHPi2022": 25,
+                "M26_CHPSi2023": 1,
+                "M26_CHPi2023": 22,
+                "M26_CHPSi2024": 1,
+                "M26_CHPi2024": 22,
+                "M27_CHOSi2022": 14,
+                "M27_CHOi2022": 613,
+                "M27_CHOSi2023": 13,
+                "M27_CHOi2023": 652,
+                "M27_CHOSi2024": 6,
+                "M27_CHOi2024": 581,
+                "M21_o": 1,
+                "M22_o": 0.14905422446406053,
+                "M23_o": 0.09249767008387698,
+                "M24_o": 0.012610340479192938,
+                "M31_o": 5.5904,
+                "N": 91,
+                "Npr": 92,
+                "VO": 16,
+                "PO": 39,
+                "NR2023": 0,
+                "NR2024": 0,
+                "NR2025": 0.87,
+                "WL2022": 60,
+                "WL2023": 70,
+                "WL2024": 70,
+                "NPR2022": 270.1,
+                "NPR2023": 278.9,
+                "NPR2024": 278.5,
+                "DN2022": 38567.4,
+                "DN2023": 96735.9,
+                "DN2024": 483281.1,
+                "Io": 47,
+                "Iv": 8,
+                "Iz": 10,
+                "No": 3296,
+                "Nv": 240,
+                "Nz": 1412,
+                "OD2022": 760316,
+                "OD2023": 870778.8,
+                "OD2024": 1348285.7,
+                "NO2022": 3320,
+                "NV2022": 128,
+                "NZ2022": 1687,
+                "NOA2022": 0,
+                "NO2023": 3369,
+                "NV2023": 193,
+                "NZ2023": 1527,
+                "NOA2023": 0,
+                "NO2024": 3296,
+                "NV2024": 240,
+                "NZ2024": 1412,
+                "NOA2024": 0
+            },
+        }));
+    }
+
     const handleAddYear = (year) => {
         setYears((prev) =>
             prev.includes(year) ? prev.slice().sort((a, b) => a - b) : [...prev, year].sort((a, b) => a - b),
@@ -1706,9 +2521,9 @@ export default function InputPage() {
     const handleCompute = async () => {
         setBusy(true);
         try {
-            const delay = 500;
             const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
             const object = await Api.calcMulti(payload);
+
             const computedClasses = Array.isArray(object?.classes) ? object.classes : [];
 
             const summary = computedClasses
@@ -1765,11 +2580,11 @@ export default function InputPage() {
                 setMetricNames(extractMetricNamesFromResult(fallbackRows[0] || {}));
             }
 
-            toast.success('Расчёт выполнен', {
-                autoClose: delay,
-            });
+            console.log(params)
+            console.log(paramsA)
+            toast.success('Расчёт выполнен', { autoClose: 1000 });
         } catch (err) {
-            alert('Ошибка расчёта: ' + err.message);
+            toast.error('Ошибка расчёта: ' + err.message, { autoClose: 3000 });
         } finally {
             setBusy(false);
         }
@@ -1820,11 +2635,11 @@ export default function InputPage() {
     const b44Fields = canonicalYears2022.flatMap((canonicalYear, idx) => {
         const visualYear = visualYears2022[idx] ?? canonicalYear;
         return [
-        [`OD${canonicalYear}`, `OD${visualYear}`],
-        [`NO${canonicalYear}`, `NO_${visualYear}`],
-        [`NV${canonicalYear}`, `NV_${visualYear}`],
-        [`NZ${canonicalYear}`, `NZ_${visualYear}`],
-        [`NOA${canonicalYear}`, `NOA_${visualYear}`],
+            [`OD${canonicalYear}`, `OD${visualYear}`],
+            [`NO${canonicalYear}`, `NO_${visualYear}`],
+            [`NV${canonicalYear}`, `NV_${visualYear}`],
+            [`NZ${canonicalYear}`, `NZ_${visualYear}`],
+            [`NOA${canonicalYear}`, `NOA_${visualYear}`],
         ];
     });
 
@@ -1858,17 +2673,17 @@ export default function InputPage() {
     ];
 
     const b22SubParamsFields = [
-        ['NBo','NBo'],
-        ['NBv','NBv'],
-        ['NBz','NBz'],
-        ['NMo','NMo'],
-        ['NMv','NMv'],
-        ['NMz','NMz'],
-        ['ACo','ACo'],
-        ['ACv','ACv'],
-        ['ACz','ACz'],
-        ['OPC','OPC'],
-        ['ACC','ACC'],
+        ['NBo', 'NBo'],
+        ['NBv', 'NBv'],
+        ['NBz', 'NBz'],
+        ['NMo', 'NMo'],
+        ['NMv', 'NMv'],
+        ['NMz', 'NMz'],
+        ['ACo', 'ACo'],
+        ['ACv', 'ACv'],
+        ['ACz', 'ACz'],
+        ['OPC', 'OPC'],
+        ['ACC', 'ACC'],
     ];
 
     const totalsModeGroupTitles = {
@@ -1888,23 +2703,23 @@ export default function InputPage() {
 
     const metricModeGroupTitles = {
         1: 'Корректирующий коэффициент',
-        2: metricNames.codeB11 || DEFAULT_METRIC_NAMES.codeB11,
-        3: metricNames.codeB12 || DEFAULT_METRIC_NAMES.codeB12,
-        4: metricNames.codeB13 || DEFAULT_METRIC_NAMES.codeB13,
-        5: metricNames.codeB21 || DEFAULT_METRIC_NAMES.codeB21,
-        6: metricNames.codeB22 || DEFAULT_METRIC_NAMES.codeB22,
-        7: metricNames.codeB23 || DEFAULT_METRIC_NAMES.codeB23,
-        8: metricNames.codeB24 || DEFAULT_METRIC_NAMES.codeB24,
-        9: metricNames.codeB25 || DEFAULT_METRIC_NAMES.codeB25,
-        10: metricNames.codeB26 || DEFAULT_METRIC_NAMES.codeB26,
-        11: metricNames.codeB31 || DEFAULT_METRIC_NAMES.codeB31,
-        12: metricNames.codeB32 || DEFAULT_METRIC_NAMES.codeB32,
-        13: metricNames.codeB33 || DEFAULT_METRIC_NAMES.codeB33,
-        14: metricNames.codeB34 || DEFAULT_METRIC_NAMES.codeB34,
-        15: metricNames.codeB41 || DEFAULT_METRIC_NAMES.codeB41,
-        16: metricNames.codeB42 || DEFAULT_METRIC_NAMES.codeB42,
-        17: metricNames.codeB43 || DEFAULT_METRIC_NAMES.codeB43,
-        18: metricNames.codeB44 || DEFAULT_METRIC_NAMES.codeB44,
+        2: 'B11 Средний балл ЕГЭ',
+        3: 'B12 Исполнение КЦП прошлых лет',
+        4: 'B13 Магистранты из стран БРИКС',
+        5: 'B21 Наличие ПОА',
+        6: 'B22 Учебная аккредитация',
+        7: 'B23 Количество ОП с аккредитацией',
+        8: 'B24 Развитие системы качества',
+        9: 'B25 Участие в сетевом взаимодействии',
+        10: 'B26 Инновационная деятельность',
+        11: 'B31 Трудоустройство выпускников',
+        12: 'B32 Средняя зарплата выпускников',
+        13: 'B33 Удовлетворённость компаний выпускниками',
+        14: 'B34 Карьерное развитие выпускников',
+        15: 'B41 Публикации на 100 НПР',
+        16: 'B42 Цитирования в международных БД',
+        17: 'B43 Участие в зарубежных проектах',
+        18: 'B44 Инновационные разработки',
     };
 
     const fieldsByGroupMetrics = {
@@ -1933,49 +2748,49 @@ export default function InputPage() {
         // extended metric groups (generic headings)
         6: b22SubParamsFields,
         7: [
-            ['KPo','KPo'],
-            ['KPv','KPv'],
-            ['KPz','KPz'],
-            ['PPPo','PPPo'],
-            ['PPPv','PPPv'],
-            ['PPPz','PPPz'],
-            ['NPo','NPo'],
-            ['NPv','NPv'],
-            ['NPz','NPz'],
-            ['NOA','NOA'],
+            ['KPo', 'KPo'],
+            ['KPv', 'KPv'],
+            ['KPz', 'KPz'],
+            ['PPPo', 'PPPo'],
+            ['PPPv', 'PPPv'],
+            ['PPPz', 'PPPz'],
+            ['NPo', 'NPo'],
+            ['NPv', 'NPv'],
+            ['NPz', 'NPz'],
+            ['NOA', 'NOA'],
         ],
         8: [
-            ['NAo','NAo'],
-            ['NAv','NAv'],
-            ['NAz','NAz'],
-            ['Po','Po'],
-            ['Pv','Pv'],
-            ['Pz','Pz'],
+            ['NAo', 'NAo'],
+            ['NAv', 'NAv'],
+            ['NAz', 'NAz'],
+            ['Po', 'Po'],
+            ['Pv', 'Pv'],
+            ['Pz', 'Pz'],
         ],
         9: b25Fields,
         10: b26Fields,
         11: [
-            ['UT','UT'],
-            ['DO','DO'],
+            ['UT', 'UT'],
+            ['DO', 'DO'],
         ],
         12: [
-            ['N','N'],
-            ['Npr','Npr'],
-            ['VO','VO'],
-            ['PO','PO'],
+            ['N', 'N'],
+            ['Npr', 'Npr'],
+            ['VO', 'VO'],
+            ['PO', 'PO'],
         ],
-        13: [['B33','B33']],
+        13: [['B33', 'B33']],
         // new input groups for formulas B34..B44
         14: b34Fields,
         15: b41Fields,
         16: b42Fields,
         17: [
-            ['Io','Io'],
-            ['Iv','Iv'],
-            ['Iz','Iz'],
-            ['No','No'],
-            ['Nv','Nv'],
-            ['Nz','Nz'],
+            ['Io', 'Io'],
+            ['Iv', 'Iv'],
+            ['Iz', 'Iz'],
+            ['No', 'No'],
+            ['Nv', 'Nv'],
+            ['Nz', 'Nz'],
         ],
         18: b44Fields,
     };
@@ -2152,15 +2967,24 @@ export default function InputPage() {
 
     return (
         <div className="input-v2-layout">
-            <Analytics
+            <div ref={chartContainerRef}>
+                <Analytics
+                    rows={rows}
+                    metricNames={metricNames}
+                    classType={selectedAnalyticsClass}
+                    availableClassTypes={historyClasses.map((item) => item.classType)}
+                    onClassTypeChange={setSelectedAnalyticsClass}
+                    metricKeys={metricKeys}
+                    visibleYears={visibleYears}
+                    onToggleYear={handleToggleYear}
+                />
+            </div>
+
+            <RecommendationsBlock
                 rows={rows}
+                metricKeys={metricKeys}
                 metricNames={metricNames}
                 classType={selectedAnalyticsClass}
-                availableClassTypes={historyClasses.map((item) => item.classType)}
-                onClassTypeChange={setSelectedAnalyticsClass}
-                metricKeys={metricKeys}
-                visibleYears={visibleYears}
-                onToggleYear={handleToggleYear}
             />
 
             <div className="card big-card input-v2-card">
@@ -2179,6 +3003,9 @@ export default function InputPage() {
                                 menuItems={[
                                     { label: 'Импорт JSON', onClick: handleImportClick },
                                     { label: 'Экспорт JSON', onClick: handleExport },
+                                    { label: 'Экспорт EXCEL', onClick: handleExportExcel },
+                                    { label: 'Экспорт PDF', onClick: handleExportPdf },
+                                    { label: 'Заполнить значениями по умолчанию', onClick: handleFillWithDefaults },
                                     { label: 'Удалить текущий год', onClick: handleDeleteCurrentYear },
                                     { label: 'Очистить всё', onClick: clearAll },
                                 ]}

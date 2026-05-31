@@ -56,14 +56,18 @@ export default function AnalyticsPage({
             </div>
 
             <div className="display-flex">
-                <RadarBlock
-                    rows={activeRows}
-                    metricNames={metricNames}
-                    metricKeys={metricKeys}
-                    viewMode={radarViewMode}
-                    classType={classType}
-                />
-                <LineGraphBlock rows={activeRows} classType={classType} />
+                <div className="export-chart" data-chart="radar">
+                    <RadarBlock
+                        rows={activeRows}
+                        metricNames={metricNames}
+                        metricKeys={metricKeys}
+                        viewMode={radarViewMode}
+                        classType={classType}
+                    />
+                </div>
+                <div className="export-chart" data-chart="line">
+                    <LineGraphBlock rows={activeRows} classType={classType} />
+                </div>
             </div>
         </>
 
