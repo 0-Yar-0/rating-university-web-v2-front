@@ -14,7 +14,7 @@ import { DEFAULT_METRIC_NAMES } from '../constants.js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { jsPDF } from 'jspdf';
-import * as XLSX from '@e965/xlsx';
+import ExcelJS from 'exceljs';
 import html2canvas from 'html2canvas';
 
 const YEAR_NOW = new Date().getFullYear();
@@ -1718,36 +1718,30 @@ export default function InputPage() {
         }
     };
 
-    const handleExportExcel = () => {
-        const workbook = XLSX.utils.book_new();
+    const handleExportExcel = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+
+        const addTransposedSheet = (sheetName, transposedData) => {
+            const worksheet = workbook.addWorksheet(sheetName);
+            transposedData.forEach((row) => worksheet.addRow(row));
+            worksheet.getColumn(1).width = 20;
+        };
 
         // --- 1. Prepare Input Data (A, B, M) ---
         const payload = buildExportPayload(years, paramsA, paramsB, paramsM, inputMode);
 
         payload.classes.forEach((cls) => {
-            const sheetName = `Inputs_${cls.classType}`;
-
             const headers = Object.keys(cls.data[0]);
             const transposedData = headers.map(key => {
                 return [key, ...cls.data.map(row => row[key])];
             });
-
-            const worksheet = XLSX.utils.aoa_to_sheet(transposedData);
-
-            // Adjust column widths
-            worksheet['!cols'] = [{ wch: 15 }];
-
-            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+            addTransposedSheet(`Inputs_${cls.classType}`, transposedData);
         });
 
-        // // --- 2. Prepare Calculated Results (Rows) ---
-
-        // 2. Export Computed Results (New logic for Results_A, Results_B, Results_M)
-        // We iterate over the historyClasses which contains the computed data per class type
+        // --- 2. Export Computed Results (Results_A, Results_B, Results_M) ---
         historyClasses.forEach((cls) => {
             const classType = cls.classType;
-
-            // Find the specific iteration results to export (defaulting to latest if not specified)
             const items = Array.isArray(cls.items) ? cls.items : [];
             const targetIter = selectedIteration;
 
@@ -1761,72 +1755,81 @@ export default function InputPage() {
             }
 
             if (resultsData.length > 0) {
-                const sheetName = `Results_${classType}`;
-
-                // Get all unique keys, ensuring 'year' is first if it exists
                 const allKeysSet = new Set();
                 resultsData.forEach(row => Object.keys(row).forEach(key => allKeysSet.add(key)));
                 const allKeys = Array.from(allKeysSet);
-                // Sort keys, prioritizing 'year' to be first if present
                 const sortedHeaders = ['year', ...allKeys.filter(k => k !== 'year').sort()];
 
-                // Create transposed array: [[Header1, Val1_Row1, Val1_Row2, ...], [Header2, Val2_Row1, Val2_Row2, ...], ...]
                 const transposedResultsData = sortedHeaders.map(headerKey => {
-                    const row = [headerKey];
-                    resultsData.forEach(originalRow => {
-                        row.push(originalRow[headerKey] ?? '');
-                    });
-                    return row;
+                    return [headerKey, ...resultsData.map(originalRow => originalRow[headerKey] ?? '')];
                 });
 
-                const worksheet = XLSX.utils.aoa_to_sheet(transposedResultsData);
-
-                // Adjust column widths
-                worksheet['!cols'] = [{ wch: 15 }];
-
-                XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+                addTransposedSheet(`Results_${classType}`, transposedResultsData);
             }
-        })
+        });
 
-        // 3. Chart data sheets (for the selected analytics class)
-        if (rows.length && metricKeys.length) {
-            // Radar data: metric labels × years
-            const radarHeaders = ['Метрика', ...rows.map((r) => String(r.year))];
-            const radarRows = metricKeys.map((key) => {
-                const nameKey = `code${key.toUpperCase()}`;
-                const label = metricNames[nameKey] || DEFAULT_METRIC_NAMES[nameKey] || key.toUpperCase();
-                return [label, ...rows.map((r) => r[key] ?? '')];
-            });
-            const radarSheet = XLSX.utils.aoa_to_sheet([radarHeaders, ...radarRows]);
-            radarSheet['!cols'] = [{ wch: 30 }, ...rows.map(() => ({ wch: 15 }))];
-            XLSX.utils.book_append_sheet(workbook, radarSheet, 'ChartData_Radar');
+        // --- 3. Chart images for all classes ---
+        for (const cls of historyClasses) {
+            const ct = cls.classType;
+            const ctRows = getRowsForClassType(ct);
+            if (!ctRows.length) continue;
 
-            // Line data: year × total score
-            const TOTAL_KEY_PRIORITY = {
-                A: ['A_TOTAL_WITH_KI', 'A_TOTAL', 'sumA', 'TOTAL'],
-                B: ['B_TOTAL_WITH_KI', 'B_TOTAL', 'sumB', 'TOTAL'],
-                M: ['M_TOTAL_WITH_KI', 'M_TOTAL', 'sumM', 'TOTAL'],
-            };
-            const priority = TOTAL_KEY_PRIORITY[selectedAnalyticsClass] || TOTAL_KEY_PRIORITY.B;
-            const resolveTotal = (row) => {
-                for (const k of priority) {
-                    const v = Number(row?.[k]);
-                    if (Number.isFinite(v)) return v;
+            const ctMetricKeys = resolveMetricKeys(ctRows, ct);
+
+            const tempContainer = document.createElement('div');
+            tempContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:700px;background:#fff;padding:20px;';
+            document.body.appendChild(tempContainer);
+
+            let root;
+            try {
+                root = createRoot(tempContainer);
+                root.render(
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', height: '100%' }}>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <RadarBlock
+                                rows={ctRows}
+                                metricNames={metricNames}
+                                metricKeys={ctMetricKeys}
+                                viewMode="percent"
+                            />
+                        </div>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <LineGraphBlock rows={ctRows} classType={ct} />
+                        </div>
+                    </div>
+                );
+
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const canvas = await html2canvas(tempContainer, { scale: 2, useCORS: true });
+                const base64 = canvas.toDataURL('image/png').split(',')[1];
+                const imageId = workbook.addImage({ base64, extension: 'png' });
+
+                const ws = workbook.addWorksheet(`Charts_${ct}`);
+                ws.getColumn(1).width = 80;
+                ws.addImage(imageId, {
+                    tl: { col: 0, row: 0 },
+                    ext: { width: 600, height: 500 },
+                });
+            } catch (e) {
+                console.warn(`Ошибка захвата графика класса ${ct}:`, e);
+            } finally {
+                if (root) {
+                    try { root.unmount(); } catch (_) { /* ignore */ }
                 }
-                return null;
-            };
-            const lineHeaders = ['Год', 'Сумма баллов'];
-            const lineRows = rows
-                .map((r) => [r.year, resolveTotal(r)])
-                .sort((a, b) => Number(a[0]) - Number(b[0]));
-            const lineSheet = XLSX.utils.aoa_to_sheet([lineHeaders, ...lineRows]);
-            lineSheet['!cols'] = [{ wch: 10 }, { wch: 20 }];
-            XLSX.utils.book_append_sheet(workbook, lineSheet, 'ChartData_Line');
+                tempContainer.remove();
+            }
         }
 
-        // 4. Trigger Download
-        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
-        XLSX.writeFile(workbook, `unirating-full-report-${timestamp}.xlsx`);
+        // --- 4. Trigger Download ---
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `unirating-full-report-${timestamp}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
     };
 
     const getRowsForClassType = (classType) => {
@@ -2031,23 +2034,9 @@ export default function InputPage() {
             }
         };
 
-        // 4a. Capture visible charts (current class)
-        if (chartContainerRef.current) {
-            const chartElements = chartContainerRef.current.querySelectorAll('[data-chart]');
-            for (const el of chartElements) {
-                const chartType = el.getAttribute('data-chart');
-                const title = chartType === 'radar' ? 'Паучья диаграмма' : 'Линейный график';
-                await captureChartElement(el, title);
-            }
-        }
-
-        // 4b. Capture charts for all class types (including non-visible ones)
-        const capturedClasses = new Set([selectedAnalyticsClass]);
+        // 4. Capture charts for all class types using the same rendering approach
         for (const cls of historyClasses) {
             const ct = cls.classType;
-            if (capturedClasses.has(ct)) continue;
-            capturedClasses.add(ct);
-
             const ctRows = getRowsForClassType(ct);
             if (!ctRows.length) continue;
 

@@ -9,13 +9,13 @@
     "preview": "vite preview --open"
   },
   "dependencies": {
-    "@e965/xlsx": "^0.20.3",
     "dayjs": "1.11.13",
+    "exceljs": "^4.4.0",
+    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-router-dom": "^6.30.3",
-    "html2canvas": "^1.4.1",
     "react-spinners": "^0.17.0",
     "react-toastify": "^11.0.5",
     "recharts": "^2.15.4",
