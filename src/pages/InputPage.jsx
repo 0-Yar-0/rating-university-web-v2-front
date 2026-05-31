@@ -1777,7 +1777,7 @@ export default function InputPage() {
             const ctMetricKeys = resolveMetricKeys(ctRows, ct);
 
             const tempContainer = document.createElement('div');
-            tempContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:700px;background:#fff;padding:20px;';
+            tempContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:950px;background:#fff;padding:20px;';
             document.body.appendChild(tempContainer);
 
             let root;
@@ -1791,6 +1791,14 @@ export default function InputPage() {
                                 metricNames={metricNames}
                                 metricKeys={ctMetricKeys}
                                 viewMode="percent"
+                            />
+                        </div>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <RadarBlock
+                                rows={ctRows}
+                                metricNames={metricNames}
+                                metricKeys={ctMetricKeys}
+                                viewMode="value"
                             />
                         </div>
                         <div style={{ width: '100%', height: 300 }}>
@@ -2043,7 +2051,7 @@ export default function InputPage() {
             const ctMetricKeys = resolveMetricKeys(ctRows, ct);
 
             const tempContainer = document.createElement('div');
-            tempContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:700px;background:#fff;padding:20px;';
+            tempContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:950px;background:#fff;padding:20px;';
             document.body.appendChild(tempContainer);
 
             let root;
@@ -2057,6 +2065,14 @@ export default function InputPage() {
                                 metricNames={metricNames}
                                 metricKeys={ctMetricKeys}
                                 viewMode="percent"
+                            />
+                        </div>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <RadarBlock
+                                rows={ctRows}
+                                metricNames={metricNames}
+                                metricKeys={ctMetricKeys}
+                                viewMode="value"
                             />
                         </div>
                         <div style={{ width: '100%', height: 300 }}>
