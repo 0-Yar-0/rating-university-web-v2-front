@@ -803,8 +803,6 @@ export default function InputPage() {
     const [paramsB, setParamsB] = useState({ [YEAR_NOW]: { ...DEFAULT_B_PARAMS } });
     const [paramsM, setParamsM] = useState({ [YEAR_NOW]: { ...DEFAULT_M_PARAMS } });
     const [busy, setBusy] = useState(false);
-    // To avoid autosave on first page load
-    const [isFromStorageFilled, setIsFromStorageFilled] = useState(false);
     const fileRef = useRef(null);
 
     // ---------------- For Analytics.jsx ----------------
@@ -847,6 +845,21 @@ export default function InputPage() {
     useEffect(() => {
         const _selectedIteration = +localStorage.getItem(STORAGE_KEY_ITERATION) || 0;
         setSelectedIteration(_selectedIteration)
+
+        // Restore from localStorage first (preserves A, B, M across refresh)
+        try {
+            const storedRaw = localStorage.getItem(STORAGE_KEY);
+            if (storedRaw) {
+                const stored = JSON.parse(storedRaw);
+                if (stored.paramsA) setParamsA(stored.paramsA);
+                if (stored.paramsB) setParamsB(stored.paramsB);
+                if (stored.paramsM) setParamsM(stored.paramsM);
+                if (Array.isArray(stored.years) && stored.years.length) {
+                    setYears(stored.years);
+                    setCurrentYear(stored.years[0]);
+                }
+            }
+        } catch (_) {}
 
         const paramsRequest = _selectedIteration
             ? Api.getParamsBByIter(_selectedIteration)
@@ -1165,10 +1178,6 @@ export default function InputPage() {
                 setParamsM(mapM);
             })
             .catch(() => { })
-            .finally(() => {
-                const payload = { years, currentYear, paramsA, paramsB, paramsM };
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-            })
 
         // ---------------- For Analytics.jsx and History.jsx ----------------
         Api.getHistoryAll()
@@ -1230,8 +1239,6 @@ export default function InputPage() {
 
     // ---------------- 2. Автосохранение ----------------
     useEffect(() => {
-        if (!isFromStorageFilled) return;
-
         const payload = { years, currentYear, paramsA, paramsB, paramsM };
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -2162,9 +2169,9 @@ export default function InputPage() {
             M27_CHOSi2022: 14, M27_CHOi2022: 613,
             M27_CHOSi2023: 13, M27_CHOi2023: 652,
             M27_CHOSi2024: 6, M27_CHOi2024: 581,
-            M21_o: 1, M22_o: 0.14905422446406053,
-            M23_o: 0.09249767008387698, M24_o: 0.012610340479192938,
-            M31_o: 5.5904,
+            M21_o: 1, M22_o: 0.149,
+            M23_o: 0.092, M24_o: 0.013,
+            M31_o: 5.590,
             N: 91, Npr: 92, VO: 16, PO: 39,
             NR2023: 0, NR2024: 0, NR2025: 0.87,
             WL2022: 60, WL2023: 70, WL2024: 70,
@@ -2206,6 +2213,9 @@ export default function InputPage() {
                 const payload = buildExportPayload(uniqueYears, aMap, bMap, mMap, 'metrics');
                 const result = await Api.calcMulti(payload);
                 const calcClasses = Array.isArray(result?.classes) ? result.classes : [];
+                if (!calcClasses.length) {
+                    toast.warning('Не удалось рассчитать итоговые значения');
+                }
 
                 for (const cls of calcClasses) {
                     const data = Array.isArray(cls.data) ? cls.data : [];
@@ -2216,18 +2226,18 @@ export default function InputPage() {
                                 ...prev,
                                 [year]: {
                                     ...(prev[year] || {}),
-                                    KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.KI, prev[year]?.KI_A ?? ''),
-                                    A11: firstDefinedValue(row.A11, prev[year]?.A11 ?? ''),
-                                    A21: firstDefinedValue(row.A21, prev[year]?.A21 ?? ''),
-                                    A22: firstDefinedValue(row.A22, prev[year]?.A22 ?? ''),
-                                    A23: firstDefinedValue(row.A23, prev[year]?.A23 ?? ''),
-                                    A31: firstDefinedValue(row.A31, prev[year]?.A31 ?? ''),
-                                    A32: firstDefinedValue(row.A32, prev[year]?.A32 ?? ''),
-                                    A33: firstDefinedValue(row.A33, prev[year]?.A33 ?? ''),
-                                    A34: firstDefinedValue(row.A34, prev[year]?.A34 ?? ''),
-                                    A35: firstDefinedValue(row.A35, prev[year]?.A35 ?? ''),
-                                    A36: firstDefinedValue(row.A36, prev[year]?.A36 ?? ''),
-                                    A37: firstDefinedValue(row.A37, prev[year]?.A37 ?? ''),
+                                    KI_A: firstDefinedValue(row.KI_A, row.A_KI, row.a_ki, row.KI, row.ki, prev[year]?.KI_A ?? ''),
+                                    A11: firstDefinedValue(row.A11, row.a11, prev[year]?.A11 ?? ''),
+                                    A21: firstDefinedValue(row.A21, row.a21, prev[year]?.A21 ?? ''),
+                                    A22: firstDefinedValue(row.A22, row.a22, prev[year]?.A22 ?? ''),
+                                    A23: firstDefinedValue(row.A23, row.a23, prev[year]?.A23 ?? ''),
+                                    A31: firstDefinedValue(row.A31, row.a31, prev[year]?.A31 ?? ''),
+                                    A32: firstDefinedValue(row.A32, row.a32, prev[year]?.A32 ?? ''),
+                                    A33: firstDefinedValue(row.A33, row.a33, prev[year]?.A33 ?? ''),
+                                    A34: firstDefinedValue(row.A34, row.a34, prev[year]?.A34 ?? ''),
+                                    A35: firstDefinedValue(row.A35, row.a35, prev[year]?.A35 ?? ''),
+                                    A36: firstDefinedValue(row.A36, row.a36, prev[year]?.A36 ?? ''),
+                                    A37: firstDefinedValue(row.A37, row.a37, prev[year]?.A37 ?? ''),
                                 },
                             }));
                         } else if (cls.classType === 'B') {
@@ -2235,24 +2245,24 @@ export default function InputPage() {
                                 ...prev,
                                 [year]: {
                                     ...(prev[year] || {}),
-                                    KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.KI, prev[year]?.KI_B ?? ''),
-                                    B11: firstDefinedValue(row.B11, prev[year]?.B11 ?? ''),
-                                    B12: firstDefinedValue(row.B12, prev[year]?.B12 ?? ''),
-                                    B13: firstDefinedValue(row.B13, prev[year]?.B13 ?? ''),
-                                    B21: firstDefinedValue(row.B21, prev[year]?.B21 ?? ''),
-                                    B22: firstDefinedValue(row.B22, prev[year]?.B22 ?? ''),
-                                    B23: firstDefinedValue(row.B23, prev[year]?.B23 ?? ''),
-                                    B24: firstDefinedValue(row.B24, prev[year]?.B24 ?? ''),
-                                    B25: firstDefinedValue(row.B25, prev[year]?.B25 ?? ''),
-                                    B26: firstDefinedValue(row.B26, prev[year]?.B26 ?? ''),
-                                    B31: firstDefinedValue(row.B31, prev[year]?.B31 ?? ''),
-                                    B32: firstDefinedValue(row.B32, prev[year]?.B32 ?? ''),
-                                    B33Result: firstDefinedValue(row.B33Result, row.B33, prev[year]?.B33Result ?? ''),
-                                    B34: firstDefinedValue(row.B34, prev[year]?.B34 ?? ''),
-                                    B41: firstDefinedValue(row.B41, prev[year]?.B41 ?? ''),
-                                    B42: firstDefinedValue(row.B42, prev[year]?.B42 ?? ''),
-                                    B43: firstDefinedValue(row.B43, prev[year]?.B43 ?? ''),
-                                    B44: firstDefinedValue(row.B44, prev[year]?.B44 ?? ''),
+                                    KI_B: firstDefinedValue(row.KI_B, row.B_KI, row.b_ki, row.KI, row.ki, prev[year]?.KI_B ?? ''),
+                                    B11: firstDefinedValue(row.B11, row.b11, prev[year]?.B11 ?? ''),
+                                    B12: firstDefinedValue(row.B12, row.b12, prev[year]?.B12 ?? ''),
+                                    B13: firstDefinedValue(row.B13, row.b13, prev[year]?.B13 ?? ''),
+                                    B21: firstDefinedValue(row.B21, row.b21, prev[year]?.B21 ?? ''),
+                                    B22: firstDefinedValue(row.B22, row.b22, prev[year]?.B22 ?? ''),
+                                    B23: firstDefinedValue(row.B23, row.b23, prev[year]?.B23 ?? ''),
+                                    B24: firstDefinedValue(row.B24, row.b24, prev[year]?.B24 ?? ''),
+                                    B25: firstDefinedValue(row.B25, row.b25, prev[year]?.B25 ?? ''),
+                                    B26: firstDefinedValue(row.B26, row.b26, prev[year]?.B26 ?? ''),
+                                    B31: firstDefinedValue(row.B31, row.b31, prev[year]?.B31 ?? ''),
+                                    B32: firstDefinedValue(row.B32, row.b32, prev[year]?.B32 ?? ''),
+                                    B33Result: firstDefinedValue(row.B33Result, row.B33, row.b33result, row.b33, prev[year]?.B33Result ?? ''),
+                                    B34: firstDefinedValue(row.B34, row.b34, prev[year]?.B34 ?? ''),
+                                    B41: firstDefinedValue(row.B41, row.b41, prev[year]?.B41 ?? ''),
+                                    B42: firstDefinedValue(row.B42, row.b42, prev[year]?.B42 ?? ''),
+                                    B43: firstDefinedValue(row.B43, row.b43, prev[year]?.B43 ?? ''),
+                                    B44: firstDefinedValue(row.B44, row.b44, prev[year]?.B44 ?? ''),
                                 },
                             }));
                         } else if (cls.classType === 'M') {
@@ -2260,25 +2270,25 @@ export default function InputPage() {
                                 ...prev,
                                 [year]: {
                                     ...(prev[year] || {}),
-                                    KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.KI, prev[year]?.KI_M ?? ''),
-                                    M11: firstDefinedValue(row.M11, prev[year]?.M11 ?? ''),
-                                    M12: firstDefinedValue(row.M12, prev[year]?.M12 ?? ''),
-                                    M13: firstDefinedValue(row.M13, prev[year]?.M13 ?? ''),
-                                    M14: firstDefinedValue(row.M14, prev[year]?.M14 ?? ''),
-                                    M21: firstDefinedValue(row.M21, prev[year]?.M21 ?? ''),
-                                    M22: firstDefinedValue(row.M22, prev[year]?.M22 ?? ''),
-                                    M23: firstDefinedValue(row.M23, prev[year]?.M23 ?? ''),
-                                    M24: firstDefinedValue(row.M24, prev[year]?.M24 ?? ''),
-                                    M25: firstDefinedValue(row.M25, prev[year]?.M25 ?? ''),
-                                    M26: firstDefinedValue(row.M26, prev[year]?.M26 ?? ''),
-                                    M27: firstDefinedValue(row.M27, prev[year]?.M27 ?? ''),
-                                    M31: firstDefinedValue(row.M31, prev[year]?.M31 ?? ''),
-                                    M32: firstDefinedValue(row.M32, prev[year]?.M32 ?? ''),
-                                    M33: firstDefinedValue(row.M33, prev[year]?.M33 ?? ''),
-                                    M41: firstDefinedValue(row.M41, prev[year]?.M41 ?? ''),
-                                    M42: firstDefinedValue(row.M42, prev[year]?.M42 ?? ''),
-                                    M43: firstDefinedValue(row.M43, prev[year]?.M43 ?? ''),
-                                    M44: firstDefinedValue(row.M44, prev[year]?.M44 ?? ''),
+                                    KI_M: firstDefinedValue(row.KI_M, row.M_KI, row.m_ki, row.KI, row.ki, prev[year]?.KI_M ?? ''),
+                                    M11: firstDefinedValue(row.M11, row.m11, prev[year]?.M11 ?? ''),
+                                    M12: firstDefinedValue(row.M12, row.m12, prev[year]?.M12 ?? ''),
+                                    M13: firstDefinedValue(row.M13, row.m13, prev[year]?.M13 ?? ''),
+                                    M14: firstDefinedValue(row.M14, row.m14, prev[year]?.M14 ?? ''),
+                                    M21: firstDefinedValue(row.M21, row.m21, prev[year]?.M21 ?? ''),
+                                    M22: firstDefinedValue(row.M22, row.m22, prev[year]?.M22 ?? ''),
+                                    M23: firstDefinedValue(row.M23, row.m23, prev[year]?.M23 ?? ''),
+                                    M24: firstDefinedValue(row.M24, row.m24, prev[year]?.M24 ?? ''),
+                                    M25: firstDefinedValue(row.M25, row.m25, prev[year]?.M25 ?? ''),
+                                    M26: firstDefinedValue(row.M26, row.m26, prev[year]?.M26 ?? ''),
+                                    M27: firstDefinedValue(row.M27, row.m27, prev[year]?.M27 ?? ''),
+                                    M31: firstDefinedValue(row.M31, row.m31, prev[year]?.M31 ?? ''),
+                                    M32: firstDefinedValue(row.M32, row.m32, prev[year]?.M32 ?? ''),
+                                    M33: firstDefinedValue(row.M33, row.m33, prev[year]?.M33 ?? ''),
+                                    M41: firstDefinedValue(row.M41, row.m41, prev[year]?.M41 ?? ''),
+                                    M42: firstDefinedValue(row.M42, row.m42, prev[year]?.M42 ?? ''),
+                                    M43: firstDefinedValue(row.M43, row.m43, prev[year]?.M43 ?? ''),
+                                    M44: firstDefinedValue(row.M44, row.m44, prev[year]?.M44 ?? ''),
                                 },
                             }));
                         }
@@ -2286,6 +2296,7 @@ export default function InputPage() {
                 }
             } catch (e) {
                 console.warn('Ошибка расчёта итоговых значений:', e);
+                toast.error('Ошибка расчёта итоговых значений: ' + (e?.message || e));
             }
         }
     }
