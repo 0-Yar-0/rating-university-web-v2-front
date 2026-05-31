@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { Api } from '../api';
 import YearPicker from '../components/YearPicker.jsx';
 import ClassList from '../components/ClassList.jsx';
@@ -7,6 +8,8 @@ import RecommendationsBlock from '../components/RecommendationsBlock.jsx';
 import Analytics from './Analytics.jsx';
 import History from './History.jsx';
 import MenuDropdown from '../components/MenuDropdown.jsx';
+import RadarBlock from '../components/RadarBlock.jsx';
+import LineGraphBlock from '../components/LineGraphBlock.jsx';
 import { DEFAULT_METRIC_NAMES } from '../constants.js';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -1805,6 +1808,17 @@ export default function InputPage() {
         XLSX.writeFile(workbook, `unirating-full-report-${timestamp}.xlsx`);
     };
 
+    const getRowsForClassType = (classType) => {
+        const cls = historyClasses.find((c) => c.classType === classType);
+        if (!cls) return [];
+        const items = Array.isArray(cls.items) ? cls.items : [];
+        if (!items.length) return [];
+        const targetItem = selectedIteration
+            ? items.find((item) => item.iter === selectedIteration)
+            : items.reduce((max, item) => (item.iter > max.iter ? item : max), items[0]);
+        return Array.isArray(targetItem?.results) ? targetItem.results : [];
+    };
+
     const handleExportPdf = async () => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -1976,28 +1990,81 @@ export default function InputPage() {
         });
 
         // --- 4. Capture charts and add to PDF ---
+        const captureChartElement = async (el, title) => {
+            try {
+                const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = pageWidth - 2 * margin;
+                const imgHeight = (canvas.height / canvas.width) * imgWidth;
+
+                if (yPos + imgHeight + 10 > pageHeight - margin) {
+                    doc.addPage();
+                    yPos = margin;
+                }
+
+                addSectionHeader(title);
+                doc.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+                yPos += imgHeight + 10;
+            } catch (e) {
+                console.warn(`Ошибка захвата графика ${title}:`, e);
+            }
+        };
+
+        // 4a. Capture visible charts (current class)
         if (chartContainerRef.current) {
             const chartElements = chartContainerRef.current.querySelectorAll('[data-chart]');
             for (const el of chartElements) {
-                try {
-                    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgWidth = pageWidth - 2 * margin;
-                    const imgHeight = (canvas.height / canvas.width) * imgWidth;
+                const chartType = el.getAttribute('data-chart');
+                const title = chartType === 'radar' ? 'Паучья диаграмма' : 'Линейный график';
+                await captureChartElement(el, title);
+            }
+        }
 
-                    if (yPos + imgHeight + 10 > pageHeight - margin) {
-                        doc.addPage();
-                        yPos = margin;
-                    }
+        // 4b. Capture charts for all class types (including non-visible ones)
+        const capturedClasses = new Set([selectedAnalyticsClass]);
+        for (const cls of historyClasses) {
+            const ct = cls.classType;
+            if (capturedClasses.has(ct)) continue;
+            capturedClasses.add(ct);
 
-                    const chartType = el.getAttribute('data-chart');
-                    const title = chartType === 'radar' ? 'Паучья диаграмма' : 'Линейный график';
-                    addSectionHeader(title);
-                    doc.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
-                    yPos += imgHeight + 10;
-                } catch (e) {
-                    console.warn('Ошибка захвата графика:', e);
+            const ctRows = getRowsForClassType(ct);
+            if (!ctRows.length) continue;
+
+            const ctMetricKeys = resolveMetricKeys(ctRows, ct);
+
+            const tempContainer = document.createElement('div');
+            tempContainer.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;height:700px;background:#fff;padding:20px;';
+            document.body.appendChild(tempContainer);
+
+            let root;
+            try {
+                root = createRoot(tempContainer);
+                root.render(
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, width: '100%', height: '100%' }}>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <RadarBlock
+                                rows={ctRows}
+                                metricNames={metricNames}
+                                metricKeys={ctMetricKeys}
+                                viewMode="percent"
+                            />
+                        </div>
+                        <div style={{ width: '100%', height: 300 }}>
+                            <LineGraphBlock rows={ctRows} classType={ct} />
+                        </div>
+                    </div>
+                );
+
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                await captureChartElement(tempContainer, `Графики класса ${ct}`);
+            } catch (e) {
+                console.warn(`Ошибка рендеринга графиков класса ${ct}:`, e);
+            } finally {
+                if (root) {
+                    try { root.unmount(); } catch (_) { /* ignore */ }
                 }
+                tempContainer.remove();
             }
         }
 
