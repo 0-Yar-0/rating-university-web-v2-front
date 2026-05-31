@@ -137,7 +137,7 @@ export default function LineGraphBlock({ rows, classType = 'B' }) {
                         reversed={false}
                         tickFormatter={formatYAxisTick}
                     />
-                    <Tooltip />
+                    <Tooltip formatter={(value) => Number.isFinite(Number(value)) ? Number(value).toFixed(3) : value} />
                     <Legend verticalAlign="bottom" height={36} />
                     <Line
                         type="monotone"
