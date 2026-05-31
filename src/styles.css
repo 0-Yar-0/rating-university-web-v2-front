@@ -1500,6 +1500,11 @@ main {
     gap: 20px;
 }
 
+.export-chart {
+    flex: 1;
+    min-width: 0;
+}
+
 .flex-1 {
     flex: 1;
 }

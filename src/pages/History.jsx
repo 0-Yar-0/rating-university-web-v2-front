@@ -24,10 +24,12 @@ const META_KEYS = new Set([
     'KI_M',
 ]);
 
+const isNumeric = (v) => (typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)));
+
 const resolveMetricKeys = (row) => Object.keys(row || {}).filter((key) => {
     if (key.startsWith('code')) return false;
     if (META_KEYS.has(key)) return false;
-    return typeof row[key] === 'number' && Number.isFinite(row[key]);
+    return isNumeric(row[key]);
 });
 
 export default function History({ items, setRows, selectedIteration, setSelectedIteration, classType = 'B', maxItems = null }) {

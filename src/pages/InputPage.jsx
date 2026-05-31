@@ -45,6 +45,8 @@ const CLASS_SPECIFIC_EXCLUDE_KEYS = {
     A: new Set(['PN', 'DI', 'SUMPOINTS', 'sumPoints']),
 };
 
+const isNumeric = (v) => (typeof v === 'number' && Number.isFinite(v)) || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)));
+
 const resolveMetricKeys = (rows, classType = 'B') => {
     if (!rows.length) {
         return [];
@@ -56,7 +58,7 @@ const resolveMetricKeys = (rows, classType = 'B') => {
         if (key.startsWith('code')) return false;
         if (METRIC_EXCLUDE_KEYS.has(key)) return false;
         if (classSpecificExcludes.has(key)) return false;
-        return typeof rows[0][key] === 'number' && Number.isFinite(rows[0][key]);
+        return isNumeric(rows[0][key]);
     });
 };
 
